@@ -1,0 +1,26 @@
+package com.aditya.wakey
+
+import android.app.Application
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import com.aditya.wakey.data.AlarmStore
+
+class WakeyApp : Application() {
+    companion object {
+        const val CH_RING = "ring_v1"
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        val nm = getSystemService(NotificationManager::class.java)
+        val ch = NotificationChannel(CH_RING, "Ringing alarms", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "Shows the alarm screen when an alarm goes off"
+            setSound(null, null) // the service plays the sound itself
+            enableVibration(false) // the service vibrates itself
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+        nm.createNotificationChannel(ch)
+        AlarmStore.init(this)
+    }
+}

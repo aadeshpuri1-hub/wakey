@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="wakey_bg">#FF111217</color>
+    <color name="wakey_accent">#FFFF4D5A</color>
+    <style name="Theme.Wakey" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/wakey_bg</item>
+        <item name="android:statusBarColor">@color/wakey_bg</item>
+        <item name="android:navigationBarColor">@color/wakey_bg</item>
+        <item name="android:colorAccent">@color/wakey_accent</item>
+    </style>
+</resources>
