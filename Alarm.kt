@@ -4,10 +4,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
 
-enum class MissionType(val title: String, val emoji: String) {
-    NONE("Off", "🔔"),
-    PHOTO("Photo", "📸"),
-    BARCODE("Barcode", "🏷️"),
+enum class MissionType(val title: String) {
+    NONE("Off"),
+    PHOTO("Photo"),
+    BARCODE("Barcode"),
 }
 
 data class Alarm(

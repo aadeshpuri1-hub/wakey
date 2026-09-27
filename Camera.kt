@@ -169,7 +169,15 @@ fun CameraGate(content: @Composable () -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("📷", fontSize = 56.sp)
+            Box(
+                Modifier.size(96.dp).background(W.AccentDim, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    com.aditya.wakey.ui.theme.WIcons.Camera, null,
+                    tint = W.Accent, modifier = Modifier.size(44.dp),
+                )
+            }
             Text(
                 "Camera access needed",
                 fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White,

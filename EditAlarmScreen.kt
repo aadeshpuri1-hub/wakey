@@ -67,6 +67,8 @@ import com.aditya.wakey.data.Alarm
 import com.aditya.wakey.data.MissionType
 import com.aditya.wakey.mission.PhotoMatcher
 import com.aditya.wakey.ui.theme.W
+import com.aditya.wakey.ui.theme.WIcons
+import com.aditya.wakey.ui.theme.icon
 
 @Composable
 fun EditAlarmScreen(
@@ -199,7 +201,11 @@ fun EditAlarmScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(m.emoji, fontSize = 30.sp)
+                        Icon(
+                            m.icon(), null,
+                            tint = if (selected) W.Accent else W.Text2,
+                            modifier = Modifier.size(30.dp),
+                        )
                         Text(
                             m.title, color = if (selected) Color.White else W.Text2,
                             fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp),
@@ -283,7 +289,7 @@ fun EditAlarmScreen(
                     }.padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("🎵", fontSize = 20.sp)
+                    RowIcon(WIcons.Music)
                     Text(
                         soundName, color = Color.White, modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -291,7 +297,7 @@ fun EditAlarmScreen(
                     Text("Change", color = W.Accent, fontWeight = FontWeight.Bold)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🔊", fontSize = 20.sp)
+                    RowIcon(WIcons.Volume)
                     Slider(
                         value = alarm.volume,
                         onValueChange = { onChange(current().copy(volume = it.coerceAtLeast(0.1f))) },
@@ -303,7 +309,7 @@ fun EditAlarmScreen(
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("📳", fontSize = 20.sp)
+                    RowIcon(WIcons.Vibrate)
                     Text("Vibration", color = Color.White, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
                     Switch(
                         checked = alarm.vibrate,
@@ -314,7 +320,7 @@ fun EditAlarmScreen(
             }
 
             // ---- snooze
-            Section("Snooze", if (alarm.snoozeMinutes == 0) "Off" else "${alarm.snoozeMinutes} min · max ${alarm.maxSnoozes}×")
+            Section("Snooze", if (alarm.snoozeMinutes == 0) "Off" else "${alarm.snoozeMinutes} min · up to ${alarm.maxSnoozes} times")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0, 3, 5, 10, 15).forEach { m ->
                     val on = alarm.snoozeMinutes == m
@@ -350,7 +356,10 @@ fun EditAlarmScreen(
                 border = BorderStroke(1.dp, W.Card2),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 20.dp).height(52.dp),
-            ) { Text("▶  Save & test: ring in 10 seconds", color = Color.White) }
+            ) {
+                Icon(WIcons.Play, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Text("Save & test: ring in 10 seconds", color = Color.White, modifier = Modifier.padding(start = 10.dp))
+            }
 
             Spacer(Modifier.height(24.dp))
         }
@@ -363,6 +372,11 @@ fun EditAlarmScreen(
             modifier = Modifier.fillMaxWidth().padding(16.dp).height(58.dp),
         ) { Text("Save", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
     }
+}
+
+@Composable
+private fun RowIcon(icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Icon(icon, null, tint = W.Text2, modifier = Modifier.size(22.dp))
 }
 
 @Composable

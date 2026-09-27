@@ -61,7 +61,12 @@ import com.aditya.wakey.mission.ScanFrame
 import com.aditya.wakey.mission.ShutterButton
 import com.aditya.wakey.mission.hasCamera
 import com.aditya.wakey.mission.rememberPreviewView
+import com.aditya.wakey.ui.theme.ClockStyle
 import com.aditya.wakey.ui.theme.W
+import com.aditya.wakey.ui.theme.WIcons
+import com.aditya.wakey.ui.theme.icon
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -94,7 +99,7 @@ fun RingFlow(alarm: Alarm) {
             onSnooze = {
                 if (!RingService.snooze()) {
                     snoozesLeft = 0
-                    Toast.makeText(ctx, "No snoozes left. Get up! 😤", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No snoozes left. Time to get up.", Toast.LENGTH_SHORT).show()
                 }
             },
             onDismiss = {
@@ -170,7 +175,7 @@ private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDi
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     SimpleDateFormat("h:mm", Locale.getDefault()).format(Date(now)),
-                    color = Color.White, fontSize = 92.sp, fontWeight = FontWeight.Bold,
+                    style = ClockStyle, color = Color.White, fontSize = 96.sp,
                 )
                 Text(
                     SimpleDateFormat("a", Locale.US).format(Date(now)),
@@ -187,7 +192,7 @@ private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDi
                 contentAlignment = Alignment.Center,
             ) {
                 Box(Modifier.size(104.dp).background(W.Accent, CircleShape), contentAlignment = Alignment.Center) {
-                    Text("⏰", fontSize = 52.sp)
+                    Icon(WIcons.AlarmClock, null, tint = Color.White, modifier = Modifier.size(52.dp))
                 }
             }
         }
@@ -197,12 +202,18 @@ private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDi
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (alarm.snoozeMinutes > 0 && snoozesLeft > 0) {
-                Text(
-                    "💤  Snooze ${alarm.snoozeMinutes} min  ·  $snoozesLeft left",
-                    color = Color.White, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(W.Card2)
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).background(W.Card2)
                         .clickable(onClick = onSnooze).padding(horizontal = 24.dp, vertical = 14.dp),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(WIcons.Snooze, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Text(
+                        "Snooze ${alarm.snoozeMinutes} min  ·  $snoozesLeft left",
+                        color = Color.White, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = 10.dp),
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
             }
             Button(
@@ -211,8 +222,12 @@ private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDi
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxWidth().height(64.dp),
             ) {
+                if (alarm.hasMission) {
+                    Icon(alarm.mission.icon(), null, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(10.dp))
+                }
                 Text(
-                    if (alarm.hasMission) "${alarm.mission.emoji}  Start mission to dismiss" else "Dismiss",
+                    if (alarm.hasMission) "Start mission to dismiss" else "Dismiss",
                     fontSize = 19.sp, fontWeight = FontWeight.Bold,
                 )
             }
@@ -310,7 +325,13 @@ private fun PhotoMission(
                     .border(2.dp, W.Accent, RoundedCornerShape(12.dp)),
             )
             Column(Modifier.padding(start = 12.dp)) {
-                Text("📸 Photo mission", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(WIcons.Camera, null, tint = W.Accent, modifier = Modifier.size(18.dp))
+                    Text(
+                        "Photo mission", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
                 Text("Go there and take the same photo", color = W.Text2, fontSize = 14.sp)
             }
         }
@@ -368,11 +389,11 @@ private fun BarcodeMission(target: String, onSuccess: () -> Unit, onUnavailable:
             Modifier.systemBarsPadding().padding(top = 20.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Hint("🏷️ Scan your registered barcode\n(ends in …${target.takeLast(4)})")
+            Hint("Scan your registered barcode\n(ends in …${target.takeLast(4)})")
         }
         if (wrong) {
             Hint(
-                "That's a different barcode 🙃",
+                "That's a different barcode",
                 Modifier.align(Alignment.BottomCenter).systemBarsPadding().padding(bottom = 32.dp),
             )
         }
@@ -391,7 +412,13 @@ private fun TypingMission(onAttempt: () -> Unit, onSuccess: () -> Unit) {
         Modifier.fillMaxSize().background(W.Bg).systemBarsPadding().imePadding().padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("⌨️ Type this exactly", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(WIcons.Keyboard, null, tint = W.Accent, modifier = Modifier.size(28.dp))
+            Text(
+                "Type this exactly", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
         Text(
             PHRASE, color = W.Accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(vertical = 20.dp),
@@ -425,7 +452,11 @@ private fun DoneScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("☀️", fontSize = 96.sp)
+        Box(
+            Modifier.size(140.dp).background(Color(0x33FFB020), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { Icon(WIcons.Sun, null, tint = W.Warn, modifier = Modifier.size(72.dp)) }
+        Spacer(Modifier.height(28.dp))
         Text("Good morning!", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
         Text("Mission complete. You're up.", color = W.Text2, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))
     }

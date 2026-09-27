@@ -33,8 +33,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aditya.wakey.alarm.AlarmScheduler
 import com.aditya.wakey.data.Alarm
-import com.aditya.wakey.data.MissionType
+import com.aditya.wakey.ui.theme.ClockStyle
 import com.aditya.wakey.ui.theme.W
+import com.aditya.wakey.ui.theme.WIcons
+import com.aditya.wakey.ui.theme.icon
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -88,7 +95,7 @@ fun AlarmListScreen(
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onFix),
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("⚠️", fontSize = 22.sp)
+                        Icon(WIcons.Warning, null, tint = W.Warn, modifier = Modifier.size(24.dp))
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(
                                 "$problems setting${if (problems > 1) "s" else ""} could stop your alarm",
@@ -96,7 +103,7 @@ fun AlarmListScreen(
                             )
                             Text("The alarm screen might not pop up. Tap to fix.", color = W.Text2, fontSize = 13.sp)
                         }
-                        Text("Fix ›", color = W.Warn, fontWeight = FontWeight.Bold)
+                        Text("Fix", color = W.Warn, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -108,7 +115,10 @@ fun AlarmListScreen(
                     Modifier.fillMaxWidth().padding(top = 80.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("⏰", fontSize = 72.sp)
+                    Box(
+                        Modifier.size(96.dp).background(W.AccentDim, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(WIcons.AlarmClock, null, tint = W.Accent, modifier = Modifier.size(48.dp)) }
                     Spacer(Modifier.height(12.dp))
                     Text("No alarms yet", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Text("Tap the red + button to create one", color = W.Text2)
@@ -134,16 +144,24 @@ private fun AlarmCard(a: Alarm, onClick: () -> Unit, onToggle: (Boolean) -> Unit
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(a.daysText(), color = if (a.enabled) W.Text2 else main, fontSize = 13.sp)
-                    if (a.mission != MissionType.NONE) {
-                        Text(
-                            "  ${a.mission.emoji} ${a.mission.title}",
-                            color = if (a.enabled) W.Accent else main, fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    if (a.hasMission) {
+                        val c = if (a.enabled) W.Accent else main
+                        Row(
+                            Modifier.padding(start = 8.dp)
+                                .background(if (a.enabled) W.AccentDim else W.Card2, RoundedCornerShape(50))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(a.mission.icon(), null, tint = c, modifier = Modifier.size(13.dp))
+                            Text(
+                                a.mission.title, color = c, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+                        }
                     }
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(a.timeText(), fontSize = 46.sp, fontWeight = FontWeight.Bold, color = main)
+                    Text(a.timeText(), style = ClockStyle, fontSize = 48.sp, color = main)
                     Text(
                         a.amPm(), fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = main,
                         modifier = Modifier.padding(start = 6.dp, bottom = 9.dp),

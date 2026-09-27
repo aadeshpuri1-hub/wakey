@@ -141,7 +141,7 @@ class RingService : Service() {
 
     private fun goForeground(alarm: Alarm?) {
         val pi = ringPendingIntent()
-        val title = alarm?.let { "⏰ ${it.timeText()} ${it.amPm()}" } ?: "⏰ Alarm"
+        val title = alarm?.let { "Alarm · ${it.timeText()} ${it.amPm()}" } ?: "Alarm"
         val text = alarm?.label?.takeIf { it.isNotBlank() } ?: "Time to wake up! Tap to open."
         val n = NotificationCompat.Builder(this, WakeyApp.CH_RING)
             .setSmallIcon(R.drawable.ic_stat_alarm)

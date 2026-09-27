@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aditya.wakey.ui.theme.ClockStyle
 import com.aditya.wakey.ui.theme.W
 
 private val ITEM_H = 64.dp
@@ -79,6 +80,7 @@ fun WheelPicker(
                 Box(Modifier.height(ITEM_H).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
                         label,
+                        style = ClockStyle,
                         fontSize = if (isSel) 42.sp else 30.sp,
                         fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
                         color = if (isSel) Color.White else W.Text2.copy(alpha = 0.55f),

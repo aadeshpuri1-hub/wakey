@@ -44,6 +44,8 @@ import com.aditya.wakey.mission.ScanFrame
 import com.aditya.wakey.mission.ShutterButton
 import com.aditya.wakey.mission.rememberPreviewView
 import com.aditya.wakey.ui.theme.W
+import com.aditya.wakey.ui.theme.WIcons
+import androidx.compose.foundation.layout.size
 
 @Composable
 private fun SetupTopBar(title: String, onClose: () -> Unit) {
@@ -141,7 +143,13 @@ fun BarcodeSetupScreen(onDone: (String?) -> Unit) {
                             Modifier.fillMaxWidth().background(W.Card, RoundedCornerShape(20.dp)).padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text("✅ Barcode found", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(WIcons.CheckCircle, null, tint = W.Good, modifier = Modifier.size(24.dp))
+                                Text(
+                                    "Barcode found", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp,
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
                             Text(f, color = W.Text2, modifier = Modifier.padding(vertical = 8.dp), maxLines = 2)
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 OutlinedButton(
