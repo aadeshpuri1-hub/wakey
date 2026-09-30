@@ -10,18 +10,27 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.aditya.wakey.ui.theme.WIcons
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -142,34 +150,14 @@ fun AppRoot() {
         else -> Scaffold(
             containerColor = W.Bg,
             bottomBar = {
-                NavigationBar(containerColor = Color(0xFF17181E)) {
-                    val colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        selectedTextColor = Color.White,
-                        indicatorColor = W.AccentDim,
-                        unselectedIconColor = W.Text2,
-                        unselectedTextColor = W.Text2,
-                    )
-                    NavigationBarItem(
-                        selected = tab == 0, onClick = { tab = 0 },
-                        icon = { Icon(Icons.Filled.Notifications, null) },
-                        label = { Text("Alarm") }, colors = colors,
-                    )
-                    NavigationBarItem(
-                        selected = tab == 1, onClick = { tab = 1 },
-                        icon = {
-                            BadgedBox(badge = { if (problems > 0) Badge { Text("$problems") } }) {
-                                Icon(Icons.Filled.Settings, null)
-                            }
-                        },
-                        label = { Text("Settings") }, colors = colors,
-                    )
-                }
+                BottomBar(
+                    tab = tab, problems = problems, onTab = { tab = it },
+                )
             },
             floatingActionButton = {
                 if (tab == 0) {
-                    FloatingActionButton(
-                        onClick = {
+                    Box(
+                        Modifier.size(62.dp).clip(CircleShape).background(W.Accent).clickable {
                             val now = Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, 8) }
                             isNew = true
                             editing = Alarm(
@@ -178,10 +166,8 @@ fun AppRoot() {
                                 minute = 0,
                             )
                         },
-                        containerColor = W.Accent,
-                        contentColor = Color.White,
-                        shape = CircleShape,
-                    ) { Icon(Icons.Filled.Add, "New alarm") }
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(WIcons.Plus, "New alarm", tint = W.OnAccent, modifier = Modifier.size(28.dp)) }
                 }
             },
         ) { pad ->
@@ -207,6 +193,37 @@ fun AppRoot() {
                         toast("Lock your phone now. Test alarm in 10 seconds.")
                     },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BottomBar(tab: Int, problems: Int, onTab: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().background(W.Bg).navigationBarsPadding()) {
+        HorizontalDivider(color = W.Line, thickness = 1.dp)
+        Row(Modifier.fillMaxWidth().height(64.dp)) {
+            listOf(WIcons.AlarmClock to "Alarm", WIcons.Gear to "Settings").forEachIndexed { i, (icon, label) ->
+                val on = tab == i
+                Column(
+                    Modifier.weight(1f).fillMaxHeight().clickable { onTab(i) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Box {
+                        Icon(icon, label, tint = if (on) W.Text else W.Text3, modifier = Modifier.size(24.dp))
+                        if (i == 1 && problems > 0) {
+                            Box(
+                                Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-2).dp)
+                                    .size(8.dp).clip(CircleShape).background(W.Accent),
+                            )
+                        }
+                    }
+                    Text(
+                        label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                        color = if (on) W.Text else W.Text3, modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
         }
     }

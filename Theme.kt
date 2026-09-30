@@ -12,16 +12,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.aditya.wakey.R
 
-/** Wakey palette: near-black, soft cards, coral-red accent (Alarmy vibes). */
+/** Monochrome palette: jet black, grey-black surfaces, white as the only accent. */
 object W {
-    val Bg = Color(0xFF111217)
-    val Card = Color(0xFF1C1D24)
-    val Card2 = Color(0xFF282A35)
-    val Accent = Color(0xFFFF4D5A)
-    val AccentDim = Color(0x33FF4D5A)
-    val Text2 = Color(0xFF9A9CA8)
-    val Good = Color(0xFF3DDC84)
-    val Warn = Color(0xFFFFB020)
+    val Bg = Color(0xFF000000)
+    val Card = Color(0xFF111111)
+    val Card2 = Color(0xFF1C1C1C)
+    val Line = Color(0xFF242424)
+    val Text = Color(0xFFFFFFFF)
+    val Text2 = Color(0xFF8C8C8C)
+    val Text3 = Color(0xFF4D4D4D)
+    val Accent = Color(0xFFFFFFFF)
+    val OnAccent = Color(0xFF000000)
+    val AccentDim = Color(0x14FFFFFF)
+    val Good = Color(0xFFFFFFFF)
+    val Warn = Color(0xFFBFBFBF)
 }
 
 val Inter = FontFamily(
@@ -31,7 +35,7 @@ val Inter = FontFamily(
     Font(R.font.inter_bold, FontWeight.Bold),
 )
 
-/** Big clock digits: display cut, even-width numbers so they don't jiggle, tight tracking. */
+/** Big clock digits: display cut, even-width numbers, tight tracking. */
 val ClockStyle = TextStyle(
     fontFamily = FontFamily(Font(R.font.inter_display_bold, FontWeight.Bold)),
     fontWeight = FontWeight.Bold,
@@ -67,20 +71,23 @@ fun WakeyTheme(content: @Composable () -> Unit) {
         typography = WakeyType,
         colorScheme = darkColorScheme(
             primary = W.Accent,
-            onPrimary = Color.White,
+            onPrimary = W.OnAccent,
             secondary = W.Accent,
+            onSecondary = W.OnAccent,
             background = W.Bg,
-            onBackground = Color.White,
+            onBackground = W.Text,
             surface = W.Bg,
-            onSurface = Color.White,
+            onSurface = W.Text,
             surfaceVariant = W.Card,
             onSurfaceVariant = W.Text2,
-            surfaceContainer = Color(0xFF17181E),
+            surfaceContainerLow = W.Card,
+            surfaceContainer = W.Card,
             surfaceContainerHigh = W.Card,
             surfaceContainerHighest = W.Card2,
-            secondaryContainer = W.AccentDim,
-            onSecondaryContainer = Color.White,
-            outline = W.Card2,
+            secondaryContainer = W.Card2,
+            onSecondaryContainer = W.Text,
+            outline = W.Line,
+            outlineVariant = W.Line,
         ),
         content = content,
     )

@@ -42,7 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -154,47 +154,57 @@ private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDi
             delay(1000)
         }
     }
-    val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
-        initialValue = 0.9f, targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "scale",
+    // Ripple rings drawn in the graphics layer only: no recomposition per frame.
+    val ripple = rememberInfiniteTransition(label = "ripple").animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1800), RepeatMode.Restart), label = "t",
     )
 
-    Box(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF3A0D16), W.Bg, W.Bg)),
-        ).systemBarsPadding(),
-    ) {
+    Box(Modifier.fillMaxSize().background(W.Bg).systemBarsPadding()) {
         Column(
-            Modifier.fillMaxWidth().padding(top = 72.dp),
+            Modifier.fillMaxWidth().padding(top = 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date(now)),
-                color = W.Text2, fontSize = 18.sp,
+                color = W.Text2, fontSize = 17.sp, fontWeight = FontWeight.Medium,
             )
-            Row(verticalAlignment = Alignment.Bottom) {
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 4.dp)) {
                 Text(
                     SimpleDateFormat("h:mm", Locale.getDefault()).format(Date(now)),
-                    style = ClockStyle, color = Color.White, fontSize = 96.sp,
+                    style = ClockStyle, color = W.Text, fontSize = 104.sp,
                 )
                 Text(
                     SimpleDateFormat("a", Locale.US).format(Date(now)),
-                    color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(start = 6.dp, bottom = 20.dp),
+                    color = W.Text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 6.dp, bottom = 22.dp),
                 )
             }
             if (alarm.label.isNotBlank()) {
-                Text(alarm.label, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    alarm.label, color = W.Text, fontSize = 20.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(W.Card)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             }
-            Spacer(Modifier.height(56.dp))
+        }
+
+        // centre: alarm icon with expanding rings
+        Box(Modifier.align(Alignment.Center).size(260.dp), contentAlignment = Alignment.Center) {
+            for (k in 0..1) {
+                Box(
+                    Modifier.size(120.dp).graphicsLayer {
+                        val t = (ripple.value + k * 0.5f) % 1f
+                        scaleX = 1f + t * 1.1f
+                        scaleY = 1f + t * 1.1f
+                        alpha = (1f - t) * 0.35f
+                    }.border(1.5.dp, W.Text, CircleShape),
+                )
+            }
             Box(
-                Modifier.size(150.dp).scale(pulse).background(W.AccentDim, CircleShape),
+                Modifier.size(120.dp).clip(CircleShape).background(W.Card),
                 contentAlignment = Alignment.Center,
-            ) {
-                Box(Modifier.size(104.dp).background(W.Accent, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(WIcons.AlarmClock, null, tint = Color.White, modifier = Modifier.size(52.dp))
-                }
-            }
+            ) { Icon(WIcons.AlarmClock, null, tint = W.Text, modifier = Modifier.size(52.dp)) }
         }
 
         Column(
@@ -203,32 +213,32 @@ private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDi
         ) {
             if (alarm.snoozeMinutes > 0 && snoozesLeft > 0) {
                 Row(
-                    Modifier.clip(RoundedCornerShape(50)).background(W.Card2)
-                        .clickable(onClick = onSnooze).padding(horizontal = 24.dp, vertical = 14.dp),
+                    Modifier.clip(RoundedCornerShape(50)).background(W.Card)
+                        .clickable(onClick = onSnooze).padding(horizontal = 22.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(WIcons.Snooze, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(WIcons.Snooze, null, tint = W.Text, modifier = Modifier.size(18.dp))
                     Text(
                         "Snooze ${alarm.snoozeMinutes} min  ·  $snoozesLeft left",
-                        color = Color.White, fontWeight = FontWeight.SemiBold,
+                        color = W.Text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
                         modifier = Modifier.padding(start = 10.dp),
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
             }
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = W.Accent),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth().height(64.dp),
+            Row(
+                Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(20.dp))
+                    .background(W.Accent).clickable(onClick = onDismiss),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (alarm.hasMission) {
-                    Icon(alarm.mission.icon(), null, modifier = Modifier.size(22.dp))
+                    Icon(alarm.mission.icon(), null, tint = W.OnAccent, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
                 }
                 Text(
-                    if (alarm.hasMission) "Start mission to dismiss" else "Dismiss",
-                    fontSize = 19.sp, fontWeight = FontWeight.Bold,
+                    if (alarm.hasMission) "Start mission" else "Dismiss",
+                    color = W.OnAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -420,7 +430,7 @@ private fun TypingMission(onAttempt: () -> Unit, onSuccess: () -> Unit) {
             )
         }
         Text(
-            PHRASE, color = W.Accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
+            PHRASE, color = W.Text2, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(vertical = 20.dp),
         )
         OutlinedTextField(
@@ -453,9 +463,9 @@ private fun DoneScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            Modifier.size(140.dp).background(Color(0x33FFB020), CircleShape),
+            Modifier.size(140.dp).background(W.Card, CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Icon(WIcons.Sun, null, tint = W.Warn, modifier = Modifier.size(72.dp)) }
+        ) { Icon(WIcons.Sun, null, tint = W.Text, modifier = Modifier.size(64.dp)) }
         Spacer(Modifier.height(28.dp))
         Text("Good morning!", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
         Text("Mission complete. You're up.", color = W.Text2, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))

@@ -2,27 +2,17 @@ package com.aditya.wakey.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,12 +22,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aditya.wakey.ui.theme.W
+import com.aditya.wakey.ui.theme.WIcons
 
 @Composable
 fun SettingsScreen(
@@ -48,6 +39,7 @@ fun SettingsScreen(
 ) {
     val ctx = LocalContext.current
     val checks = remember(tick) { Health.checks(ctx) }
+    val bad = checks.count { it.required && it.ok == false }
     var pendingFallback by remember { mutableStateOf<Health.Fix.Permission?>(null) }
 
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -58,75 +50,77 @@ fun SettingsScreen(
         onChanged()
     }
 
+    fun fix(c: Health.Check) {
+        when (val f = c.fix) {
+            is Health.Fix.Permission -> {
+                pendingFallback = f
+                permLauncher.launch(f.permission)
+            }
+            is Health.Fix.Open -> Health.open(ctx, f.intents)
+        }
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 32.dp),
     ) {
         item {
-            Column(Modifier.padding(start = 8.dp, top = 16.dp, bottom = 8.dp)) {
-                Text("Alarm reliability", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Column(Modifier.padding(start = 6.dp, bottom = 8.dp)) {
+                Text("Settings", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = W.Text, letterSpacing = (-0.5).sp)
                 Text(
-                    "Everything must be green for the alarm screen to pop up every time.",
-                    color = W.Text2, modifier = Modifier.padding(top = 4.dp),
+                    if (bad == 0) "Everything's set. Your alarm will ring." else "$bad thing${if (bad > 1) "s" else ""} could stop your alarm",
+                    color = W.Text2, fontSize = 15.sp, modifier = Modifier.padding(top = 6.dp),
                 )
             }
         }
 
-        items(checks, key = { it.key }) { c ->
-            Card(
-                colors = CardDefaults.cardColors(containerColor = W.Card),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val (icon, tint) = when (c.ok) {
-                        true -> Icons.Filled.CheckCircle to W.Good
-                        false -> Icons.Filled.Warning to (if (c.required) W.Accent else W.Warn)
-                        null -> Icons.Filled.Info to W.Warn
-                    }
-                    Icon(icon, null, tint = tint, modifier = Modifier.size(26.dp))
-                    Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                        Text(c.title, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text(c.why, color = W.Text2, fontSize = 13.sp, lineHeight = 17.sp)
-                    }
-                    if (c.ok != true) {
-                        Button(
-                            onClick = {
-                                when (val f = c.fix) {
-                                    is Health.Fix.Permission -> {
-                                        pendingFallback = f
-                                        permLauncher.launch(f.permission)
-                                    }
-                                    is Health.Fix.Open -> Health.open(ctx, f.intents)
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (c.ok == false && c.required) W.Accent else W.Card2,
-                            ),
-                            contentPadding = PaddingValues(horizontal = 14.dp),
-                        ) { Text(if (c.ok == null) "Open" else "Fix") }
+        item { SectionTitle("Alarm reliability") }
+        item {
+            SectionCard {
+                checks.forEachIndexed { i, c ->
+                    if (i > 0) RowDivider()
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            Modifier.size(22.dp).clip(CircleShape)
+                                .background(if (c.ok == true) W.Accent else W.Card2),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                if (c.ok == true) WIcons.CheckCircle else WIcons.Warning, null,
+                                tint = if (c.ok == true) W.OnAccent else W.Text,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                        Column(Modifier.weight(1f).padding(start = 16.dp, end = 12.dp)) {
+                            Text(c.title, fontWeight = FontWeight.SemiBold, color = W.Text, fontSize = 15.sp)
+                            Text(c.why, color = W.Text2, fontSize = 13.sp, lineHeight = 17.sp)
+                        }
+                        when (c.ok) {
+                            true -> Text("On", color = W.Text3, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            false -> Pill(if (c.required) "Fix" else "Allow", { fix(c) }, filled = c.required)
+                            null -> Pill("Open", { fix(c) }, filled = false)
+                        }
                     }
                 }
             }
         }
 
+        item { SectionTitle("Test") }
         item {
-            Column(Modifier.padding(start = 8.dp, top = 24.dp, bottom = 8.dp)) {
-                Text("Test it", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(
-                    "Tap, then lock your phone. After 10 seconds the alarm screen should light up over the lock screen. Try it again while using another app.",
-                    color = W.Text2, modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-            Button(
-                onClick = onQuickTest,
-                colors = ButtonDefaults.buttonColors(containerColor = W.Accent),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) {
-                Icon(Icons.Filled.PlayArrow, null)
-                Text("  Ring a test alarm in 10 s", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            SectionCard {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "Tap, then lock your phone. In 10 seconds the alarm should take over the lock screen. Try it again while using another app.",
+                        color = W.Text2, fontSize = 14.sp, lineHeight = 19.sp,
+                    )
+                    PrimaryButton(
+                        "Ring a test alarm in 10 s", onClick = onQuickTest, icon = WIcons.Play,
+                        modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+                    )
+                }
             }
         }
     }
