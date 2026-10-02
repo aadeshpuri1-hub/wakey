@@ -35,6 +35,7 @@ fun SettingsScreen(
     tick: Int,
     onChanged: () -> Unit,
     onQuickTest: () -> Unit,
+    onJournal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ctx = LocalContext.current
@@ -105,6 +106,17 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+        }
+
+        item { SectionTitle("Mornings") }
+        item {
+            SectionCard {
+                SettingRow(
+                    WIcons.Book, "Gratitude journal",
+                    value = "${com.aditya.wakey.gratitude.GratitudeStore.all(ctx).size} entries",
+                    onClick = onJournal,
+                )
             }
         }
 

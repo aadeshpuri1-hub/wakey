@@ -51,6 +51,8 @@ import com.aditya.wakey.alarm.AlarmScheduler
 import com.aditya.wakey.data.Alarm
 import com.aditya.wakey.data.AlarmStore
 import com.aditya.wakey.data.MissionType
+import com.aditya.wakey.focus.Focus
+import com.aditya.wakey.focus.FocusStore
 import com.aditya.wakey.ui.theme.W
 import com.aditya.wakey.ui.theme.WakeyTheme
 import java.util.Calendar
@@ -61,6 +63,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         AlarmStore.init(this)
         AlarmScheduler.rescheduleAll(this)
+        Focus.sync(this)
         setContent { WakeyTheme { AppRoot() } }
     }
 }
@@ -74,10 +77,13 @@ fun AppRoot() {
     var isNew by remember { mutableStateOf(false) }
     var setup by remember { mutableStateOf<MissionType?>(null) }
     var healthTick by remember { mutableIntStateOf(0) }
+    var pickingApps by remember { mutableStateOf(false) }
+    var journal by remember { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         healthTick++
         AlarmScheduler.rescheduleAll(ctx) // pick up newly granted exact-alarm permission etc.
+        Focus.sync(ctx)
     }
     val problems = remember(healthTick) { Health.problemCount(ctx) }
 
@@ -107,6 +113,24 @@ fun AppRoot() {
 
     val cur = editing
     when {
+        pickingApps -> {
+            val fc = FocusStore.get(ctx)
+            AppPickerScreen(
+                selected = fc.apps,
+                locked = if (fc.isActive()) fc.apps else emptySet(),
+                onDone = { picked ->
+                    val latest = FocusStore.get(ctx)
+                    // strict mode: never drop apps while the window is active
+                    val finalSet = if (latest.isActive()) picked + latest.apps else picked
+                    FocusStore.save(ctx, latest.copy(apps = finalSet))
+                    Focus.sync(ctx)
+                    pickingApps = false
+                },
+            )
+        }
+
+        journal -> JournalScreen(onBack = { journal = false })
+
         cur != null && setup == MissionType.PHOTO -> PhotoSetupScreen(
             alarmId = cur.id,
             onDone = { path ->
@@ -171,7 +195,13 @@ fun AppRoot() {
                 }
             },
         ) { pad ->
-            if (tab == 0) {
+            if (tab == 1) {
+                FocusScreen(
+                    tick = healthTick,
+                    onPickApps = { pickingApps = true },
+                    modifier = Modifier.padding(pad),
+                )
+            } else if (tab == 0) {
                 AlarmListScreen(
                     alarms = alarms,
                     problems = problems,
@@ -181,13 +211,14 @@ fun AppRoot() {
                         val saved = persist(a.copy(enabled = on))
                         if (on) toast(AlarmScheduler.ringInText(AlarmScheduler.nextTrigger(saved)))
                     },
-                    onFix = { tab = 1 },
+                    onFix = { tab = 2 },
                 )
             } else {
                 SettingsScreen(
                     tick = healthTick,
                     onChanged = { healthTick++ },
                     modifier = Modifier.padding(pad),
+                    onJournal = { journal = true },
                     onQuickTest = {
                         AlarmScheduler.scheduleTest(ctx, AlarmStore.QUICK_TEST_ID, 10)
                         toast("Lock your phone now. Test alarm in 10 seconds.")
@@ -203,7 +234,7 @@ private fun BottomBar(tab: Int, problems: Int, onTab: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().background(W.Bg).navigationBarsPadding()) {
         HorizontalDivider(color = W.Line, thickness = 1.dp)
         Row(Modifier.fillMaxWidth().height(64.dp)) {
-            listOf(WIcons.AlarmClock to "Alarm", WIcons.Gear to "Settings").forEachIndexed { i, (icon, label) ->
+            listOf(WIcons.AlarmClock to "Alarm", WIcons.Moon to "Focus", WIcons.Gear to "Settings").forEachIndexed { i, (icon, label) ->
                 val on = tab == i
                 Column(
                     Modifier.weight(1f).fillMaxHeight().clickable { onTab(i) },
@@ -212,7 +243,7 @@ private fun BottomBar(tab: Int, problems: Int, onTab: (Int) -> Unit) {
                 ) {
                     Box {
                         Icon(icon, label, tint = if (on) W.Text else W.Text3, modifier = Modifier.size(24.dp))
-                        if (i == 1 && problems > 0) {
+                        if (i == 2 && problems > 0) {
                             Box(
                                 Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-2).dp)
                                     .size(8.dp).clip(CircleShape).background(W.Accent),

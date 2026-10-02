@@ -94,6 +94,34 @@ object WIcons {
     )
     val Play = line("play", "M7 4l13 8-13 8z")
     val Chevron = line("chevron", "M9 6l6 6-6 6")
+    val Moon = line("moon", "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z")
+    val Lock = line(
+        "lock",
+        "M7 11h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z",
+        "M8 11V7a4 4 0 0 1 8 0v4",
+    )
+    val Globe = line(
+        "globe",
+        "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z",
+        "M2 12h20",
+        "M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20z",
+    )
+    val Apps = line(
+        "apps",
+        "M4 4h6v6H4z", "M14 4h6v6h-6z", "M4 14h6v6H4z", "M14 14h6v6h-6z",
+    )
+    val Book = line(
+        "book",
+        "M4 19.5A2.5 2.5 0 0 1 6.5 17H20",
+        "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z",
+    )
+    val Search = line("search", "M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z", "M21 21l-4.3-4.3")
+    val Eye = line(
+        "eye",
+        "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z",
+        "M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z",
+    )
+    val Check = line("check", "M5 12l5 5L20 7")
     val Plus = line("plus", "M12 5v14", "M5 12h14")
     val Close = line("close", "M6 6l12 12", "M18 6L6 18")
     val Trash = line(

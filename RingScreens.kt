@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aditya.wakey.alarm.RingService
 import com.aditya.wakey.data.Alarm
+import com.aditya.wakey.data.AlarmStore
+import com.aditya.wakey.gratitude.GratitudeActivity
 import com.aditya.wakey.data.MissionType
 import com.aditya.wakey.mission.CameraPreview
 import com.aditya.wakey.mission.PhotoMatcher
@@ -104,7 +106,7 @@ fun RingFlow(alarm: Alarm) {
             },
             onDismiss = {
                 when {
-                    !alarm.hasMission -> RingService.dismiss()
+                    !alarm.hasMission -> finishAlarm(ctx, alarm)
                     !hasCamera(ctx) -> stage = Stage.TYPING
                     else -> stage = Stage.MISSION
                 }
@@ -139,7 +141,7 @@ fun RingFlow(alarm: Alarm) {
             onEscape = {},
         ) { onAttempt -> TypingMission(onAttempt = onAttempt, onSuccess = { stage = Stage.DONE }) }
 
-        Stage.DONE -> DoneScreen()
+        Stage.DONE -> DoneScreen(alarm)
     }
 }
 
@@ -451,11 +453,18 @@ private fun TypingMission(onAttempt: () -> Unit, onSuccess: () -> Unit) {
 
 // ------------------------------------------------------------------ done
 
+/** Stops the alarm and opens the gratitude screen (real alarms, once a day). */
+private fun finishAlarm(ctx: android.content.Context, alarm: Alarm) {
+    if (alarm.id != AlarmStore.QUICK_TEST_ID) GratitudeActivity.launchIfNeeded(ctx)
+    RingService.dismiss()
+}
+
 @Composable
-private fun DoneScreen() {
+private fun DoneScreen(alarm: Alarm) {
+    val ctx = LocalContext.current
     LaunchedEffect(Unit) {
-        delay(1500)
-        RingService.dismiss()
+        delay(1000)
+        finishAlarm(ctx, alarm)
     }
     Column(
         Modifier.fillMaxSize().background(W.Bg),
@@ -467,7 +476,7 @@ private fun DoneScreen() {
             contentAlignment = Alignment.Center,
         ) { Icon(WIcons.Sun, null, tint = W.Text, modifier = Modifier.size(64.dp)) }
         Spacer(Modifier.height(28.dp))
-        Text("Good morning!", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-        Text("Mission complete. You're up.", color = W.Text2, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))
+        Text("Mission complete", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Text("You're up.", color = W.Text2, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))
     }
 }

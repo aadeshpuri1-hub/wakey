@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
@@ -14,6 +15,17 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Lets the app picker list launchable apps on Android 11+ -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
@@ -45,6 +57,37 @@
             android:turnScreenOn="true"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Wakey" />
+
+        <activity
+            android:name=".gratitude.GratitudeActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.aditya.wakey.gratitude"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Wakey" />
+
+        <service
+            android:name=".focus.FocusService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Blocks apps the user chose during their own sleep schedule" />
+        </service>
+
+        <service
+            android:name=".focus.ShieldVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
+                android:value="true" />
+        </service>
 
         <receiver
             android:name=".alarm.AlarmReceiver"
