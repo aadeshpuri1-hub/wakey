@@ -58,15 +58,15 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Wakey" />
 
-        <activity
-            android:name=".gratitude.GratitudeActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:taskAffinity="com.aditya.wakey.gratitude"
-            android:excludeFromRecents="true"
-            android:showWhenLocked="true"
-            android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.Wakey" />
+        <service
+            android:name=".alarm.GuardAccessibilityService"
+            android:exported="true"
+            android:label="Wakey turn-off prevention"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".focus.FocusService"
@@ -79,7 +79,7 @@
 
         <service
             android:name=".focus.ShieldVpnService"
-            android:exported="false"
+            android:exported="true"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService" />

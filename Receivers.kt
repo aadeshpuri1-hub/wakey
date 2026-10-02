@@ -27,5 +27,12 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         AlarmScheduler.rescheduleAll(ctx)
         com.aditya.wakey.focus.Focus.sync(ctx)
+        // Phone was switched off mid-alarm? Pick up exactly where it stopped.
+        RingService.pending(ctx)?.let { (id, gratitude) ->
+            try {
+                RingService.start(ctx, id, gratitude)
+            } catch (_: Exception) {
+            }
+        }
     }
 }

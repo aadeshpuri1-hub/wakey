@@ -55,7 +55,17 @@ import androidx.compose.ui.unit.sp
 import com.aditya.wakey.alarm.RingService
 import com.aditya.wakey.data.Alarm
 import com.aditya.wakey.data.AlarmStore
-import com.aditya.wakey.gratitude.GratitudeActivity
+import com.aditya.wakey.alarm.RingStage
+import com.aditya.wakey.gratitude.GratitudeScreen
+import com.aditya.wakey.gratitude.GratitudeStore
+import com.aditya.wakey.ui.theme.Inter
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import com.aditya.wakey.data.MissionType
 import com.aditya.wakey.mission.CameraPreview
 import com.aditya.wakey.mission.PhotoMatcher
@@ -77,25 +87,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class Stage { ALARM, MISSION, TYPING, DONE }
-
 private const val MISSION_SECONDS = 60
-private const val ESCAPE_AFTER_MS = 3 * 60 * 1000L
-private const val PHRASE = "I am awake and I am getting out of bed right now"
+private const val WRITING_IDLE_SECONDS = 90
 
 @Composable
 fun RingFlow(alarm: Alarm) {
     val ctx = LocalContext.current
-    var stage by remember { mutableStateOf(Stage.ALARM) }
-    val ringStart = remember { System.currentTimeMillis() }
+    val stage by RingService.stage.collectAsState()
     var snoozesLeft by remember { mutableIntStateOf(RingService.snoozesLeft(ctx, alarm)) }
 
-    LaunchedEffect(stage) {
-        RingService.setMissionActive(stage == Stage.MISSION || stage == Stage.TYPING)
-    }
-
     when (stage) {
-        Stage.ALARM -> AlarmFace(
+        RingStage.ALARM -> AlarmFace(
             alarm = alarm,
             snoozesLeft = snoozesLeft,
             onSnooze = {
@@ -107,48 +109,60 @@ fun RingFlow(alarm: Alarm) {
             onDismiss = {
                 when {
                     !alarm.hasMission -> finishAlarm(ctx, alarm)
-                    !hasCamera(ctx) -> stage = Stage.TYPING
-                    else -> stage = Stage.MISSION
+                    !hasCamera(ctx) -> RingService.setStage(RingStage.WRITING)
+                    else -> RingService.setStage(RingStage.MISSION)
                 }
             },
+            onWriteInstead = { RingService.setStage(RingStage.WRITING) },
         )
 
-        Stage.MISSION -> MissionHost(
-            onTimeout = { stage = Stage.ALARM },
-            canEscape = { System.currentTimeMillis() - ringStart > ESCAPE_AFTER_MS },
-            onEscape = { stage = Stage.TYPING },
+        RingStage.MISSION -> MissionHost(
+            seconds = MISSION_SECONDS,
+            onTimeout = { RingService.setStage(RingStage.ALARM) },
         ) { onAttempt ->
             when (alarm.mission) {
                 MissionType.PHOTO -> PhotoMission(
                     path = alarm.missionData ?: "",
                     sensitivity = alarm.photoSensitivity,
                     onAttempt = onAttempt,
-                    onSuccess = { stage = Stage.DONE },
-                    onUnavailable = { stage = Stage.TYPING },
+                    onSuccess = { RingService.setStage(RingStage.DONE) },
+                    onUnavailable = { RingService.setStage(RingStage.WRITING) },
                 )
                 MissionType.BARCODE -> BarcodeMission(
                     target = alarm.missionData ?: "",
-                    onSuccess = { stage = Stage.DONE },
-                    onUnavailable = { stage = Stage.TYPING },
+                    onSuccess = { RingService.setStage(RingStage.DONE) },
+                    onUnavailable = { RingService.setStage(RingStage.WRITING) },
                 )
-                MissionType.NONE -> LaunchedEffect(Unit) { stage = Stage.DONE }
+                MissionType.NONE -> LaunchedEffect(Unit) { RingService.setStage(RingStage.DONE) }
             }
         }
 
-        Stage.TYPING -> MissionHost(
-            onTimeout = { stage = Stage.ALARM },
-            canEscape = { false },
-            onEscape = {},
-        ) { onAttempt -> TypingMission(onAttempt = onAttempt, onSuccess = { stage = Stage.DONE }) }
+        RingStage.WRITING -> MissionHost(
+            seconds = WRITING_IDLE_SECONDS,
+            onTimeout = { RingService.setStage(RingStage.ALARM) },
+        ) { onAttempt ->
+            WritingMission(onAttempt = onAttempt, onSuccess = { RingService.setStage(RingStage.DONE) })
+        }
 
-        Stage.DONE -> DoneScreen(alarm)
+        RingStage.DONE -> DoneScreen(alarm)
+
+        RingStage.GRATITUDE -> GratitudeScreen(onSave = { topic, text ->
+            GratitudeStore.add(ctx, topic, text)
+            RingService.dismiss()
+        })
     }
 }
 
 // ------------------------------------------------------------------ alarm face
 
 @Composable
-private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDismiss: () -> Unit) {
+private fun AlarmFace(
+    alarm: Alarm,
+    snoozesLeft: Int,
+    onSnooze: () -> Unit,
+    onDismiss: () -> Unit,
+    onWriteInstead: () -> Unit,
+) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -243,52 +257,46 @@ private fun AlarmFace(alarm: Alarm, snoozesLeft: Int, onSnooze: () -> Unit, onDi
                     color = W.OnAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                 )
             }
+            if (alarm.hasMission) {
+                Text(
+                    "Not at home? Write 4 paragraphs instead",
+                    color = W.Text2, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 14.dp).clip(RoundedCornerShape(50))
+                        .clickable(onClick = onWriteInstead).padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
         }
     }
 }
 
 // ------------------------------------------------------------------ mission host
 
-/** Mission frame with a countdown. If time runs out, back to the loud alarm screen. */
+/** Mission frame with a countdown. Idle too long = back to the loud alarm screen. */
 @Composable
 private fun MissionHost(
+    seconds: Int,
     onTimeout: () -> Unit,
-    canEscape: () -> Boolean,
-    onEscape: () -> Unit,
     content: @Composable (onAttempt: () -> Unit) -> Unit,
 ) {
     var attempt by remember { mutableIntStateOf(0) }
-    var remaining by remember { mutableIntStateOf(MISSION_SECONDS) }
-    var showEscape by remember { mutableStateOf(canEscape()) }
+    var remaining by remember { mutableIntStateOf(seconds) }
 
     LaunchedEffect(attempt) {
-        remaining = MISSION_SECONDS
+        remaining = seconds
         while (remaining > 0) {
             delay(1000)
             remaining--
-            if (!showEscape) showEscape = canEscape()
         }
         onTimeout()
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         content { attempt++ }
-        Column(Modifier.fillMaxWidth().systemBarsPadding()) {
-            LinearProgressIndicator(
-                progress = { remaining / MISSION_SECONDS.toFloat() },
-                color = W.Accent, trackColor = Color(0x55FFFFFF),
-                modifier = Modifier.fillMaxWidth().height(6.dp),
-            )
-            if (showEscape) {
-                Text(
-                    "Can't do the mission?",
-                    color = W.Text2, fontSize = 13.sp,
-                    modifier = Modifier.align(Alignment.End).padding(12.dp)
-                        .background(Color(0xAA000000), RoundedCornerShape(50))
-                        .clickable(onClick = onEscape).padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
-        }
+        LinearProgressIndicator(
+            progress = { remaining / seconds.toFloat() },
+            color = W.Accent, trackColor = Color(0x33FFFFFF),
+            modifier = Modifier.fillMaxWidth().systemBarsPadding().height(4.dp),
+        )
     }
 }
 
@@ -412,51 +420,92 @@ private fun BarcodeMission(target: String, onSuccess: () -> Unit, onUnavailable:
     }
 }
 
-// ------------------------------------------------------------------ typing fallback
+// ------------------------------------------------------------------ writing mission (backup)
 
-private fun normalize(s: String) =
-    s.lowercase().filter { it.isLetter() || it == ' ' }.split(' ').filter { it.isNotBlank() }.joinToString(" ")
-
+/** Copy 4 paragraphs exactly (a couple of typos allowed). The backup when you're not near your photo/barcode. */
 @Composable
-private fun TypingMission(onAttempt: () -> Unit, onSuccess: () -> Unit) {
-    var text by remember { mutableStateOf("") }
+private fun WritingMission(onAttempt: () -> Unit, onSuccess: () -> Unit) {
+    LaunchedEffect(Unit) {
+        if (RingService.writingSet.value.isEmpty()) {
+            RingService.writingSet.value = PARAGRAPHS.indices.shuffled().take(WRITING_COUNT)
+        }
+    }
+    val set by RingService.writingSet.collectAsState()
+    val done by RingService.writingDone.collectAsState()
+    if (set.size < WRITING_COUNT) return
+    val index = done.coerceAtMost(WRITING_COUNT - 1)
+    val target = PARAGRAPHS[set[index]]
+    var text by remember(index) { mutableStateOf("") }
+    val progress = typedProgress(text, target)
+
     Column(
-        Modifier.fillMaxSize().background(W.Bg).systemBarsPadding().imePadding().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
+        Modifier.fillMaxSize().background(W.Bg).systemBarsPadding().imePadding()
+            .verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
     ) {
+        Spacer(Modifier.height(28.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(WIcons.Keyboard, null, tint = W.Accent, modifier = Modifier.size(28.dp))
+            Icon(WIcons.Keyboard, null, tint = W.Text, modifier = Modifier.size(22.dp))
             Text(
-                "Type this exactly", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 12.dp),
+                "Paragraph ${index + 1} of $WRITING_COUNT", color = W.Text, fontSize = 18.sp,
+                fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp).weight(1f),
             )
+            Text("${(progress * 100).toInt()}%", color = W.Text2, fontSize = 14.sp)
+        }
+        Row(Modifier.padding(top = 12.dp).fillMaxWidth()) {
+            for (i in 0 until WRITING_COUNT) {
+                Box(
+                    Modifier.weight(1f).padding(end = if (i < WRITING_COUNT - 1) 6.dp else 0.dp).height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)).background(if (i < done) W.Accent else W.Card2),
+                )
+            }
         }
         Text(
-            PHRASE, color = W.Text2, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(vertical = 20.dp),
+            "Type this exactly:", color = W.Text2, fontSize = 13.sp,
+            modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
         )
-        OutlinedTextField(
-            value = text,
-            onValueChange = {
-                text = it
-                onAttempt()
-                if (normalize(it) == normalize(PHRASE)) onSuccess()
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = W.Accent, unfocusedBorderColor = W.Card2,
-                focusedContainerColor = W.Card, unfocusedContainerColor = W.Card,
-            ),
-            modifier = Modifier.fillMaxWidth(),
+        Text(
+            target, color = W.Text, fontSize = 17.sp, lineHeight = 25.sp,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(W.Card).padding(16.dp),
         )
+        Box(
+            Modifier.padding(top = 12.dp).fillMaxWidth().heightIn(min = 140.dp)
+                .clip(RoundedCornerShape(18.dp)).background(W.Card2).padding(16.dp),
+        ) {
+            BasicTextField(
+                value = text,
+                onValueChange = { v ->
+                    text = v
+                    onAttempt()
+                    if (typedMatches(v, target)) {
+                        val next = done + 1
+                        RingService.writingDone.value = next
+                        if (next >= WRITING_COUNT) onSuccess()
+                    }
+                },
+                textStyle = TextStyle(color = W.Text, fontSize = 17.sp, fontFamily = Inter, lineHeight = 25.sp),
+                cursorBrush = SolidColor(W.Accent),
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { inner ->
+                    Box {
+                        if (text.isEmpty()) Text("Start typing…", color = W.Text3, fontSize = 17.sp)
+                        inner()
+                    }
+                },
+            )
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 
 // ------------------------------------------------------------------ done
 
-/** Stops the alarm and opens the gratitude screen (real alarms, once a day). */
+/** Silences the alarm; real alarms then require today's gratitude before Wakey lets go. */
 private fun finishAlarm(ctx: android.content.Context, alarm: Alarm) {
-    if (alarm.id != AlarmStore.QUICK_TEST_ID) GratitudeActivity.launchIfNeeded(ctx)
-    RingService.dismiss()
+    if (alarm.id != AlarmStore.QUICK_TEST_ID && !GratitudeStore.writtenToday(ctx)) {
+        RingService.toGratitude()
+    } else {
+        RingService.dismiss()
+    }
 }
 
 @Composable

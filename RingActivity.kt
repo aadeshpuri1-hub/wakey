@@ -2,6 +2,7 @@ package com.aditya.wakey.ring
 
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
@@ -17,9 +18,9 @@ import com.aditya.wakey.ui.theme.WakeyTheme
 import kotlinx.coroutines.launch
 
 /**
- * The full-screen "wake up!" screen. Shows over the lock screen, turns the screen on,
- * ignores Back. Closing it does NOT stop the alarm: RingService keeps ringing and
- * brings this screen back until the mission is done.
+ * The full-screen wake-up flow: alarm → mission → gratitude. Shows over the lock screen,
+ * turns the screen on, ignores Back and the volume keys. Closing it does NOT end anything:
+ * RingService keeps everything running and brings this screen back.
  */
 class RingActivity : ComponentActivity() {
 
@@ -42,7 +43,7 @@ class RingActivity : ComponentActivity() {
         )
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Nope. Finish the mission.
+                // Nope.
             }
         })
 
@@ -69,10 +70,20 @@ class RingActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         isVisible = true
+        RingService.onScreenVisibility()
     }
 
     override fun onStop() {
         super.onStop()
         isVisible = false
+        RingService.onScreenVisibility() // left the mission? back to full volume
+    }
+
+    /** Volume buttons do nothing here. */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+            keyCode == KeyEvent.KEYCODE_VOLUME_MUTE
+        ) return true
+        return super.onKeyDown(keyCode, event)
     }
 }

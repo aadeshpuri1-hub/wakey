@@ -1,23 +1,15 @@
 package com.aditya.wakey.gratitude
 
 import android.content.Context
-import android.content.Intent
-import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.WindowManager
-import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +39,6 @@ import com.aditya.wakey.ui.PrimaryButton
 import com.aditya.wakey.ui.theme.Inter
 import com.aditya.wakey.ui.theme.W
 import com.aditya.wakey.ui.theme.WIcons
-import com.aditya.wakey.ui.theme.WakeyTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
@@ -56,7 +48,52 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-data class GratitudeEntry(val time: Long, val first: String, val second: String)
+data class GratitudeEntry(val time: Long, val topic: String, val text: String)
+
+/** Minimum words, about 2–3 lines on a phone. */
+const val GRATITUDE_MIN_WORDS = 25
+
+/** One topic per day so it never turns into "I'm grateful for my phone". */
+val GRATITUDE_TOPICS = listOf(
+    "A person who helped you recently, and what they did",
+    "Something about your body or health you usually take for granted",
+    "A small moment from yesterday that made you smile",
+    "A skill you have today that you didn't have a year ago",
+    "Someone in your family and one thing you love about them",
+    "A friend who would pick up the phone at 3 AM",
+    "A meal you really enjoyed and who you had it with",
+    "Something difficult that taught you a lesson",
+    "A teacher or mentor who changed how you think",
+    "Something in your room or home that makes life easier",
+    "A place you love going to and why",
+    "A piece of music, book or film that moved you",
+    "An opportunity you have that many people don't",
+    "A habit you've built that you're proud of",
+    "Something about today you're looking forward to",
+    "A stranger's kindness you still remember",
+    "A memory from childhood that still makes you happy",
+    "Something in nature you noticed this week",
+    "A mistake that turned out better than expected",
+    "Someone who believes in you, and how you know it",
+    "Your sleep, your bed, and the fact that you woke up today",
+    "A conversation that stayed with you",
+    "Something you own that you once wished for",
+    "A problem you solved recently",
+    "A part of your routine that keeps you grounded",
+    "Someone who makes you laugh",
+    "Freedom you have that someone in history didn't",
+    "A goal you're working towards and why it matters",
+    "A time someone forgave you",
+    "Something simple: water, light, food, a roof. Pick one and go deep",
+)
+
+fun topicFor(timeMs: Long = System.currentTimeMillis()): String {
+    val c = Calendar.getInstance().apply { timeInMillis = timeMs }
+    val key = c.get(Calendar.YEAR) * 400 + c.get(Calendar.DAY_OF_YEAR)
+    return GRATITUDE_TOPICS[key % GRATITUDE_TOPICS.size]
+}
+
+fun wordCount(s: String) = s.trim().split(Regex("\\s+")).count { w -> w.any { it.isLetterOrDigit() } }
 
 object GratitudeStore {
     private const val PREFS = "wakey_gratitude"
@@ -76,7 +113,12 @@ object GratitudeStore {
             val a = JSONArray(raw)
             (0 until a.length()).map {
                 val o = a.getJSONObject(it)
-                GratitudeEntry(o.getLong("t"), o.optString("a"), o.optString("b"))
+                if (o.has("text")) {
+                    GratitudeEntry(o.getLong("t"), o.optString("topic"), o.optString("text"))
+                } else {
+                    // older two-line entries
+                    GratitudeEntry(o.getLong("t"), "", listOf(o.optString("a"), o.optString("b")).filter { s -> s.isNotBlank() }.joinToString("\n"))
+                }
             }
         } catch (e: Exception) {
             emptyList()
@@ -90,9 +132,9 @@ object GratitudeStore {
     }
 
     @Synchronized
-    fun add(ctx: Context, a: String, b: String) {
-        val list = listOf(GratitudeEntry(System.currentTimeMillis(), a.trim(), b.trim())) + all(ctx)
-        val arr = JSONArray(list.map { JSONObject().put("t", it.time).put("a", it.first).put("b", it.second) })
+    fun add(ctx: Context, topic: String, text: String) {
+        val list = listOf(GratitudeEntry(System.currentTimeMillis(), topic, text.trim())) + all(ctx)
+        val arr = JSONArray(list.map { JSONObject().put("t", it.time).put("topic", it.topic).put("text", it.text) })
         ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY, arr.toString()).apply()
         _entries.value = list
@@ -106,145 +148,83 @@ object GratitudeStore {
     }
 }
 
-/**
- * After the alarm is dismissed: "Good morning" + two gratitude lines. Mandatory:
- * Back does nothing and leaving brings it back until both lines are written.
- */
-class GratitudeActivity : ComponentActivity() {
-
-    companion object {
-        /** Shows the screen if today's entry isn't written yet. */
-        fun launchIfNeeded(ctx: Context) {
-            if (GratitudeStore.writtenToday(ctx)) return
-            try {
-                ctx.startActivity(
-                    Intent(ctx, GratitudeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    private var done = false
-    private val handler = Handler(Looper.getMainLooper())
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= 27) setShowWhenLocked(true)
-        @Suppress("DEPRECATION")
-        window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {}
-        })
-        if (GratitudeStore.writtenToday(this)) {
-            done = true
-            finish()
-            return
-        }
-        enableEdgeToEdge()
-        setContent {
-            WakeyTheme {
-                GratitudeScreen(onSave = { a, b ->
-                    GratitudeStore.add(this, a, b)
-                    done = true
-                    finish()
-                })
-            }
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        handler.removeCallbacksAndMessages(null)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // Left without writing? Come back.
-        if (!done && !isChangingConfigurations) {
-            handler.postDelayed({
-                if (!done) {
-                    try {
-                        startActivity(
-                            Intent(this, GratitudeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    } catch (_: Exception) {
-                    }
-                }
-            }, 1500)
-        }
-    }
-
-    override fun onDestroy() {
-        if (done) handler.removeCallbacksAndMessages(null)
-        super.onDestroy()
-    }
-}
-
-private fun ok(s: String) = s.trim().length >= 3
-
+/** Morning check-in shown inside the alarm flow after the alarm is silenced. */
 @Composable
-private fun GratitudeScreen(onSave: (String, String) -> Unit) {
-    var a by remember { mutableStateOf("") }
-    var b by remember { mutableStateOf("") }
+fun GratitudeScreen(onSave: (topic: String, text: String) -> Unit) {
+    val topic = remember { topicFor() }
+    var text by rememberSaveable { mutableStateOf("") }
+    val words = wordCount(text)
+    val ready = words >= GRATITUDE_MIN_WORDS
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
     Column(
         Modifier.fillMaxSize().background(W.Bg).systemBarsPadding().imePadding()
             .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
     ) {
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(40.dp))
         Box(
-            Modifier.size(72.dp).clip(CircleShape).background(W.Card),
+            Modifier.size(64.dp).clip(CircleShape).background(W.Card),
             contentAlignment = Alignment.Center,
-        ) { Icon(WIcons.Sun, null, tint = W.Text, modifier = Modifier.size(34.dp)) }
+        ) { Icon(WIcons.Sun, null, tint = W.Text, modifier = Modifier.size(30.dp)) }
         Text(
             if (hour < 12) "Good morning." else "Good day.",
-            color = W.Text, fontSize = 36.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp,
-            modifier = Modifier.padding(top = 24.dp),
+            color = W.Text, fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp,
+            modifier = Modifier.padding(top = 20.dp),
         )
         Text(
             SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date()),
-            color = W.Text2, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp),
+            color = W.Text2, fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp),
+        )
+
+        Text(
+            "TODAY'S GRATITUDE",
+            color = W.Text2, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp,
+            modifier = Modifier.padding(top = 32.dp),
         )
         Text(
-            "Before you start, write two things you're grateful for.",
-            color = W.Text, fontSize = 18.sp, fontWeight = FontWeight.Medium, lineHeight = 25.sp,
-            modifier = Modifier.padding(top = 36.dp, bottom = 18.dp),
+            topic, color = W.Text, fontSize = 21.sp, fontWeight = FontWeight.SemiBold, lineHeight = 28.sp,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         )
-        GratitudeField("1", "I'm grateful for…", a) { a = it }
-        Spacer(Modifier.height(12.dp))
-        GratitudeField("2", "I'm thankful that…", b) { b = it }
-        Spacer(Modifier.height(28.dp))
+
+        Box(
+            Modifier.fillMaxWidth().heightIn(min = 160.dp).clip(RoundedCornerShape(20.dp))
+                .background(W.Card).padding(18.dp),
+        ) {
+            BasicTextField(
+                value = text,
+                onValueChange = { text = it.take(1500) },
+                textStyle = TextStyle(color = W.Text, fontSize = 17.sp, fontFamily = Inter, lineHeight = 25.sp),
+                cursorBrush = SolidColor(W.Accent),
+                minLines = 4,
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { inner ->
+                    Box {
+                        if (text.isEmpty()) {
+                            Text(
+                                "Write at least 2–3 lines. Be specific: who, what, and why it matters to you.",
+                                color = W.Text3, fontSize = 17.sp, lineHeight = 25.sp,
+                            )
+                        }
+                        inner()
+                    }
+                },
+            )
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp, start = 4.dp, end = 4.dp)) {
+            Text(
+                if (ready) "Nice." else "${GRATITUDE_MIN_WORDS - words} more words",
+                color = if (ready) W.Text else W.Text2, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
+            )
+            Text("$words / $GRATITUDE_MIN_WORDS", color = W.Text3, fontSize = 13.sp)
+        }
+        Spacer(Modifier.height(24.dp))
         PrimaryButton(
             "Start my day",
-            onClick = { if (ok(a) && ok(b)) onSave(a, b) },
-            enabled = ok(a) && ok(b),
+            onClick = { if (ready) onSave(topic, text) },
+            enabled = ready,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(32.dp))
-    }
-}
-
-@Composable
-private fun GratitudeField(num: String, hint: String, value: String, onChange: (String) -> Unit) {
-    Box(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(W.Card)
-            .padding(horizontal = 18.dp, vertical = 18.dp),
-    ) {
-        BasicTextField(
-            value = value,
-            onValueChange = { onChange(it.take(140)) },
-            textStyle = TextStyle(color = W.Text, fontSize = 17.sp, fontFamily = Inter, lineHeight = 24.sp),
-            cursorBrush = SolidColor(W.Accent),
-            minLines = 2,
-            modifier = Modifier.fillMaxWidth(),
-            decorationBox = { inner ->
-                Box {
-                    if (value.isEmpty()) Text("$num.  $hint", color = W.Text3, fontSize = 17.sp, lineHeight = 24.sp)
-                    inner()
-                }
-            },
-        )
     }
 }

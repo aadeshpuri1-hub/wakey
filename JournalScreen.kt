@@ -91,12 +91,14 @@ fun JournalScreen(onBack: () -> Unit) {
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(W.Card).padding(18.dp),
                 ) {
                     Text(fmt.format(Date(e.time)), color = W.Text2, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    if (e.topic.isNotBlank()) {
+                        Text(
+                            e.topic, color = W.Text2, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                            lineHeight = 19.sp, modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
                     Text(
-                        e.first, color = W.Text, fontSize = 16.sp, lineHeight = 22.sp,
-                        modifier = Modifier.padding(top = 10.dp),
-                    )
-                    Text(
-                        e.second, color = W.Text, fontSize = 16.sp, lineHeight = 22.sp,
+                        e.text, color = W.Text, fontSize = 16.sp, lineHeight = 23.sp,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }

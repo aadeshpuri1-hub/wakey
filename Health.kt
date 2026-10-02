@@ -106,6 +106,14 @@ object Health {
         )
 
         list += Check(
+            "guard", "Turn-off prevention",
+            "Blocks the power menu, notification shade and other apps until you finish your mission. Accessibility → Wakey turn-off prevention → On.",
+            com.aditya.wakey.alarm.GuardAccessibilityService.isEnabled(ctx),
+            required = true,
+            fix = Fix.Open(listOf(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), appDetails)),
+        )
+
+        list += Check(
             "camera", "Camera",
             "Needed for photo and barcode missions.",
             hasCamera(ctx),
