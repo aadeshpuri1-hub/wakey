@@ -1,4 +1,4 @@
-package com.aditya.wakey.data
+package app.upwake.data
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -8,6 +8,23 @@ enum class MissionType(val title: String) {
     NONE("Off"),
     PHOTO("Photo"),
     BARCODE("Barcode"),
+    STEPS("Steps"),
+    SQUATS("Squats"),
+    PUSHUPS("Push-ups");
+
+    /** Missions that use the camera (need the backup writing mission when no camera). */
+    val usesCamera: Boolean get() = this == PHOTO || this == BARCODE || this == SQUATS || this == PUSHUPS
+
+    /** Motion missions store their target count in missionData. */
+    val isMotion: Boolean get() = this == STEPS || this == SQUATS || this == PUSHUPS
+
+    /** Choices offered for motion missions, first is the default. */
+    val counts: List<Int> get() = when (this) {
+        STEPS -> listOf(30, 50, 100)
+        SQUATS -> listOf(10, 20, 30)
+        PUSHUPS -> listOf(5, 10, 20)
+        else -> emptyList()
+    }
 }
 
 data class Alarm(
@@ -19,7 +36,7 @@ data class Alarm(
     val enabled: Boolean = true,
     val label: String = "",
     val mission: MissionType = MissionType.NONE,
-    /** PHOTO: absolute path of reference jpg. BARCODE: raw barcode value. */
+    /** PHOTO: absolute path of reference jpg. BARCODE: raw barcode value. Motion: target count. */
     val missionData: String? = null,
     /** 0 easy, 1 normal, 2 hard */
     val photoSensitivity: Int = 1,

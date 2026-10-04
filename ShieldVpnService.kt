@@ -1,4 +1,4 @@
-package com.aditya.wakey.focus
+package app.upwake.focus
 
 import android.app.PendingIntent
 import android.content.Context
@@ -7,7 +7,7 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import com.aditya.wakey.ui.MainActivity
+import app.upwake.ui.MainActivity
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * "Wakey Shield": a local, DNS-only VPN. Only DNS lookups enter it; all other traffic goes
+ * "Upwake Shield": a local, DNS-only VPN. Only DNS lookups enter it; all other traffic goes
  * straight to the internet as usual, and nothing leaves the phone except normal DNS queries.
  *
  *  - Adult sites (always, when on): lookups go to Cloudflare for Families (1.1.1.3), which refuses adult domains.
@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
 class ShieldVpnService : VpnService() {
 
     companion object {
-        private const val TAG = "WakeyShield"
+        private const val TAG = "UpwakeShield"
         private const val TUN_IP = "10.111.222.1"
         private const val DNS_IP = "10.111.222.2"
 
@@ -85,7 +85,7 @@ class ShieldVpnService : VpnService() {
 
     private fun establish() {
         val b = Builder()
-            .setSession("Wakey Shield")
+            .setSession("Upwake Shield")
             .addAddress(TUN_IP, 32)
             .addDnsServer(DNS_IP)
             .addRoute(DNS_IP, 32)
@@ -110,7 +110,7 @@ class ShieldVpnService : VpnService() {
         out = FileOutputStream(fd.fileDescriptor)
         pool = Executors.newFixedThreadPool(4)
         running = true
-        reader = Thread({ readLoop(fd) }, "wakey-dns").also { it.start() }
+        reader = Thread({ readLoop(fd) }, "upwake-dns").also { it.start() }
     }
 
     fun shutdown() {

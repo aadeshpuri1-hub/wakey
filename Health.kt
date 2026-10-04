@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import android.Manifest
 import android.app.AlarmManager
@@ -11,7 +11,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
-import com.aditya.wakey.mission.hasCamera
+import app.upwake.mission.hasCamera
 
 /** Everything that has to be true for an alarm to reliably take over the screen. */
 object Health {
@@ -93,7 +93,7 @@ object Health {
         val pm = ctx.getSystemService(PowerManager::class.java)
         list += Check(
             "battery", "Unrestricted battery",
-            "Stops Android from putting Wakey to sleep overnight.",
+            "Stops Android from putting Upwake to sleep overnight.",
             pm.isIgnoringBatteryOptimizations(pkg),
             required = true,
             fix = Fix.Open(
@@ -106,9 +106,9 @@ object Health {
         )
 
         list += Check(
-            "guard", "Turn-off prevention",
-            "Blocks the power menu, notification shade and other apps until you finish your mission. Accessibility → Wakey turn-off prevention → On.",
-            com.aditya.wakey.alarm.GuardAccessibilityService.isEnabled(ctx),
+            "guard", "Strict mode",
+            "Blocks the power menu, notification shade and other apps until your mission is done. Accessibility → Upwake turn-off prevention → On.",
+            app.upwake.alarm.GuardAccessibilityService.isEnabled(ctx),
             required = true,
             fix = Fix.Open(listOf(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), appDetails)),
         )
@@ -141,7 +141,7 @@ object Health {
         if (isAggressiveOem()) {
             list += Check(
                 "autostart", "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }}: Autostart",
-                "Your phone brand kills background apps. Turn ON Autostart / 'Allow background activity' for Wakey.",
+                "Your phone brand kills background apps. Turn ON Autostart / 'Allow background activity' for Upwake.",
                 null, required = false,
                 fix = Fix.Open(
                     listOf(

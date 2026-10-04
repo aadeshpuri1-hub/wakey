@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui.theme
+package app.upwake.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
-import com.aditya.wakey.data.MissionType
+import app.upwake.data.MissionType
 
 /** Consistent 2px line icons (24x24 grid) used everywhere instead of emoji. */
 object WIcons {
@@ -34,6 +34,25 @@ object WIcons {
         "M12 9v4l2.5 2",
         "M5 3L2 6", "M22 6l-3-3",
         "M6.4 18.7L4.5 20.5", "M17.6 18.7l1.9 1.8",
+    )
+    val Stopwatch = line(
+        "stopwatch",
+        "M12 6a7.5 7.5 0 1 0 0 15a7.5 7.5 0 1 0 0-15z",
+        "M12 10v4", "M10 2h4", "M12 2v4", "M18.5 6.5l1.5-1.5",
+    )
+    val Minus = line("minus", "M5 12h14")
+    val Steps = line(
+        "steps",
+        "M7 3c1.7 0 2.5 1.8 2.5 4S8.7 12 7 12S4.5 9.2 4.5 7S5.3 3 7 3z", "M5 15h4v2.5a2 2 0 0 1-4 0z",
+        "M17 8c1.7 0 2.5 1.8 2.5 4S18.7 17 17 17S14.5 14.2 14.5 12S15.3 8 17 8z", "M15 20h4",
+    )
+    val Squat = line(
+        "squat",
+        "M12 2.5a2 2 0 1 0 0 4a2 2 0 1 0 0-4z", "M12 8.5v5l-4 3v4.5", "M12 13.5l4 3v4.5", "M6 10.5h12",
+    )
+    val Pushup = line(
+        "pushup",
+        "M19.5 7.5a2 2 0 1 0 0 4a2 2 0 1 0 0-4z", "M17 11l-12 3.5", "M15 11.6V17", "M5 14.5V17", "M2 20h20",
     )
     val BellOff = line(
         "bell_off",
@@ -147,4 +166,7 @@ fun MissionType.icon(): ImageVector = when (this) {
     MissionType.NONE -> WIcons.BellOff
     MissionType.PHOTO -> WIcons.Camera
     MissionType.BARCODE -> WIcons.Barcode
+    MissionType.STEPS -> WIcons.Steps
+    MissionType.SQUATS -> WIcons.Squat
+    MissionType.PUSHUPS -> WIcons.Pushup
 }

@@ -1,4 +1,4 @@
-package com.aditya.wakey.alarm
+package app.upwake.alarm
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -11,7 +11,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import android.view.inputmethod.InputMethodManager
-import com.aditya.wakey.ring.RingActivity
+import app.upwake.ring.RingActivity
 
 /**
  * "Turn-off prevention". Only does anything while an alarm / morning check-in is in progress:

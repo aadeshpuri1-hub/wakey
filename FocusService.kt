@@ -1,4 +1,4 @@
-package com.aditya.wakey.focus
+package app.upwake.focus
 
 import android.app.AppOpsManager
 import android.app.PendingIntent
@@ -32,9 +32,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import com.aditya.wakey.R
-import com.aditya.wakey.WakeyApp
-import com.aditya.wakey.ui.MainActivity
+import app.upwake.R
+import app.upwake.UpwakeApp
+import app.upwake.ui.MainActivity
 
 /** Starts/stops the blocker and the shield to match the saved settings. */
 object Focus {
@@ -45,7 +45,7 @@ object Focus {
             try {
                 ContextCompat.startForegroundService(ctx, Intent(ctx, FocusService::class.java))
             } catch (e: Exception) {
-                Log.w("WakeyFocus", "can't start focus service", e)
+                Log.w("UpwakeFocus", "can't start focus service", e)
             }
         } else {
             ctx.stopService(Intent(ctx, FocusService::class.java))
@@ -120,7 +120,7 @@ class FocusService : Service() {
             this, 8, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val n = NotificationCompat.Builder(this, WakeyApp.CH_FOCUS)
+        val n = NotificationCompat.Builder(this, UpwakeApp.CH_FOCUS)
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(if (active) "Sleep focus is on" else "Sleep focus")
             .setContentText(text)
@@ -132,7 +132,7 @@ class FocusService : Service() {
             val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
             ServiceCompat.startForeground(this, 4343, n, type)
         } catch (e: Exception) {
-            Log.e("WakeyFocus", "startForeground failed", e)
+            Log.e("UpwakeFocus", "startForeground failed", e)
         }
     }
 
@@ -175,7 +175,7 @@ class FocusService : Service() {
                 if (e.eventType == FOREGROUND_EVENT) currentPkg = e.packageName
             }
         } catch (ex: Exception) {
-            Log.w("WakeyFocus", "usage query failed", ex)
+            Log.w("UpwakeFocus", "usage query failed", ex)
         }
         lastQuery = now
         return currentPkg
@@ -260,7 +260,7 @@ class FocusService : Service() {
             getSystemService(WindowManager::class.java).addView(root, lp)
             overlay = root
         } catch (e: Exception) {
-            Log.w("WakeyFocus", "overlay failed", e)
+            Log.w("UpwakeFocus", "overlay failed", e)
         }
         goHome()
     }

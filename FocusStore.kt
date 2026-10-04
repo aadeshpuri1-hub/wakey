@@ -1,4 +1,4 @@
-package com.aditya.wakey.focus
+package app.upwake.focus
 
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,7 +85,7 @@ fun formatMin(minOfDay: Int): String {
 }
 
 object FocusStore {
-    private const val PREFS = "wakey_focus"
+    private const val PREFS = "upwake_focus"
     private const val KEY = "cfg"
 
     private val _cfg = MutableStateFlow(FocusConfig())
@@ -108,6 +108,7 @@ object FocusStore {
 
     fun get(ctx: Context): FocusConfig {
         init(ctx)
+        applyPendingIfDue(ctx)
         return _cfg.value
     }
 
@@ -117,6 +118,57 @@ object FocusStore {
             .putString(KEY, c.toJson().toString()).apply()
         _cfg.value = c
     }
+
+    // ------------------------------------------------------------ schedule changes
+    // Times can always be changed. During an active session the change is queued and
+    // takes effect when the session ends, so moving bedtime can't be used to unlock apps early.
+
+    /** Queued bedtime/wake (bedH, bedM, wakeH, wakeM), or null. */
+    private val _pending = MutableStateFlow<List<Int>?>(null)
+    val pending: StateFlow<List<Int>?> = _pending
+    private var pendingLoaded = false
+
+    private fun loadPending(ctx: Context) {
+        if (pendingLoaded) return
+        val raw = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_PENDING, null)
+        _pending.value = raw?.split(",")?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 4 }
+        pendingLoaded = true
+    }
+
+    private fun writePending(ctx: Context, v: List<Int>?) {
+        ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {
+            if (v == null) remove(KEY_PENDING) else putString(KEY_PENDING, v.joinToString(","))
+        }.apply()
+        _pending.value = v
+    }
+
+    @Synchronized
+    fun applyPendingIfDue(ctx: Context) {
+        loadPending(ctx)
+        val p = _pending.value ?: return
+        val c = _cfg.value
+        if (c.isActive()) return
+        save(ctx, c.copy(bedH = p[0], bedM = p[1], wakeH = p[2], wakeM = p[3]))
+        writePending(ctx, null)
+    }
+
+    /** Returns true if applied now, false if queued until the current session ends. */
+    @Synchronized
+    fun setTimes(ctx: Context, bedH: Int, bedM: Int, wakeH: Int, wakeM: Int): Boolean {
+        init(ctx)
+        loadPending(ctx)
+        val c = _cfg.value
+        return if (c.isActive()) {
+            writePending(ctx, listOf(bedH, bedM, wakeH, wakeM))
+            false
+        } else {
+            save(ctx, c.copy(bedH = bedH, bedM = bedM, wakeH = wakeH, wakeM = wakeM))
+            writePending(ctx, null)
+            true
+        }
+    }
+
+    private const val KEY_PENDING = "pending_times"
 }
 
 /** Popular social apps: suggested in the picker, and their websites get blocked in browsers too. */

@@ -1,7 +1,8 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
+    android:width="56dp" android:height="56dp"
+    android:viewportWidth="56" android:viewportHeight="56">
+    <group android:translateX="-26" android:translateY="-29">
     <!-- alarm bells -->
     <path android:strokeColor="#FFB340" android:strokeWidth="5" android:strokeLineCap="round"
         android:pathData="M33,44 A11,11 0 0,1 44,33 M64,33 A11,11 0 0,1 75,44" />
@@ -21,4 +22,5 @@
     <!-- horizon -->
     <path android:strokeColor="#FFFFFF" android:strokeWidth="4.5" android:strokeLineCap="round"
         android:pathData="M36,80.5 L72,80.5" />
+    </group>
 </vector>

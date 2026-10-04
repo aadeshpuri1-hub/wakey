@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import android.content.Context
 import android.content.Intent
@@ -42,10 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-import com.aditya.wakey.focus.SocialCatalog
-import com.aditya.wakey.ui.theme.Inter
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.focus.SocialCatalog
+import app.upwake.ui.theme.Inter
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

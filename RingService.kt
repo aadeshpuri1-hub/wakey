@@ -1,4 +1,4 @@
-package com.aditya.wakey.alarm
+package app.upwake.alarm
 
 import android.app.KeyguardManager
 import android.app.NotificationManager
@@ -38,11 +38,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import com.aditya.wakey.R
-import com.aditya.wakey.WakeyApp
-import com.aditya.wakey.data.Alarm
-import com.aditya.wakey.data.AlarmStore
-import com.aditya.wakey.ring.RingActivity
+import app.upwake.R
+import app.upwake.UpwakeApp
+import app.upwake.data.Alarm
+import app.upwake.data.AlarmStore
+import app.upwake.ring.RingActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.max
@@ -53,7 +53,7 @@ enum class RingStage { ALARM, MISSION, WRITING, DONE, GRATITUDE }
 
 /**
  * Owns a ringing alarm until the person has completed everything (mission + gratitude).
- * Layers that keep the person inside Wakey:
+ * Layers that keep the person inside Upwake:
  *  1. full-screen notification (lock screen), re-fired whenever the screen isn't showing
  *  2. direct relaunch of the alarm screen
  *  3. a black overlay that covers every other app ("Display over other apps")
@@ -63,12 +63,12 @@ enum class RingStage { ALARM, MISSION, WRITING, DONE, GRATITUDE }
 class RingService : Service() {
 
     companion object {
-        private const val TAG = "WakeyRing"
+        private const val TAG = "UpwakeRing"
         private const val EXTRA_ID = "alarm_id"
         private const val EXTRA_GRATITUDE = "gratitude_only"
         private const val NOTIF_ID = 4242
         private const val NUDGE_ID = 4245
-        private const val PERSIST = "wakey_ring"
+        private const val PERSIST = "upwake_ring"
 
         private val _current = MutableStateFlow<Alarm?>(null)
         /** The alarm in progress (ringing, mission or gratitude), or null. */
@@ -101,7 +101,7 @@ class RingService : Service() {
             instance?.applyVolume()
         }
 
-        /** Silence the alarm but keep the person in Wakey for the gratitude check-in. */
+        /** Silence the alarm but keep the person in Upwake for the gratitude check-in. */
         fun toGratitude() {
             instance?.doGratitude()
         }
@@ -218,7 +218,7 @@ class RingService : Service() {
             else -> "Alarm"
         }
         val text = if (grat) "Tap to write today's gratitude." else alarm?.label?.takeIf { it.isNotBlank() } ?: "Time to wake up. Tap to open."
-        return NotificationCompat.Builder(this, WakeyApp.CH_RING)
+        return NotificationCompat.Builder(this, UpwakeApp.CH_RING)
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(title)
             .setContentText(text)
@@ -301,7 +301,7 @@ class RingService : Service() {
 
     private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, resources.displayMetrics).toInt()
 
-    /** Black full-screen window over every app. Only the way back into Wakey is clickable. */
+    /** Black full-screen window over every app. Only the way back into Upwake is clickable. */
     private fun showGuard() {
         if (guard != null || !Settings.canDrawOverlays(this)) return
         val bold = try { ResourcesCompat.getFont(this, R.font.inter_bold) } catch (e: Exception) { null }
@@ -520,7 +520,7 @@ class RingService : Service() {
     private fun acquireLocks() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         if (cpuLock == null) {
-            cpuLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "wakey:ring").apply {
+            cpuLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "upwake:ring").apply {
                 setReferenceCounted(false)
                 acquire(60 * 60 * 1000L)
             }
@@ -529,7 +529,7 @@ class RingService : Service() {
             @Suppress("DEPRECATION")
             pm.newWakeLock(
                 PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "wakey:screen",
+                "upwake:screen",
             ).acquire(15_000L)
         } catch (_: Exception) {
         }

@@ -30,12 +30,15 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
-        android:name=".WakeyApp"
-        android:allowBackup="true"
+        android:name=".UpwakeApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
-        android:label="Wakey"
-        android:theme="@style/Theme.Wakey">
+        android:label="@string/app_name"
+        android:theme="@style/Theme.Upwake">
 
         <activity
             android:name=".ui.MainActivity"
@@ -51,21 +54,24 @@
             android:name=".ring.RingActivity"
             android:exported="false"
             android:launchMode="singleTask"
-            android:taskAffinity="com.aditya.wakey.ring"
+            android:taskAffinity="app.upwake.ring"
             android:excludeFromRecents="true"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.Wakey" />
+            android:theme="@style/Theme.Upwake" />
 
         <service
             android:name=".alarm.GuardAccessibilityService"
             android:exported="true"
-            android:label="Wakey turn-off prevention"
+            android:label="@string/guard_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/guard_accessibility" />
         </service>
 
         <service

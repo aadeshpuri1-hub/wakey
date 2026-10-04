@@ -1,0 +1,9 @@
+Copyright (c) 2026 Aditya Puri. All rights reserved.
+
+This software and its source code are proprietary and confidential.
+No part of it may be copied, modified, distributed, sublicensed or used
+in any form without prior written permission from the copyright holder.
+
+Third-party components are licensed under their own terms
+(see FONT_LICENSE_Inter.txt and the licenses of the dependencies declared
+in app/build.gradle.kts).

@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,14 +27,17 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
 
 /** White pill button with black text. */
 @Composable
@@ -111,10 +114,10 @@ fun WSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
         checked = checked,
         onCheckedChange = onCheckedChange,
         colors = SwitchDefaults.colors(
-            checkedThumbColor = W.OnAccent,
-            checkedTrackColor = W.Accent,
-            checkedBorderColor = W.Accent,
-            uncheckedThumbColor = W.Text2,
+            checkedThumbColor = Color.White,
+            checkedTrackColor = W.Green,
+            checkedBorderColor = W.Green,
+            uncheckedThumbColor = Color.White,
             uncheckedTrackColor = W.Card2,
             uncheckedBorderColor = W.Card2,
         ),
@@ -194,7 +197,10 @@ fun WSheet(title: String, onDismiss: () -> Unit, content: @Composable ColumnScop
         contentColor = W.Text,
         dragHandle = { BottomSheetDefaults.DragHandle(color = W.Text3) },
     ) {
-        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 32.dp)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, bottom = 32.dp),
+        ) {
             Text(
                 title, color = W.Text, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp),

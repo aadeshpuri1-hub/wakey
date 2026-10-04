@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Wakey"
+rootProject.name = "Upwake"
 include(":app")

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="wakey_bg">#FF000000</color>
-    <color name="wakey_accent">#FFFFFFFF</color>
-    <style name="Theme.Wakey" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/wakey_bg</item>
-        <item name="android:statusBarColor">@color/wakey_bg</item>
-        <item name="android:navigationBarColor">@color/wakey_bg</item>
-        <item name="android:colorAccent">@color/wakey_accent</item>
+    <color name="upwake_bg">#FF000000</color>
+    <color name="upwake_dawn">#FFFF9F0A</color>
+    <style name="Theme.Upwake" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/upwake_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorAccent">@color/upwake_dawn</item>
     </style>
 </resources>

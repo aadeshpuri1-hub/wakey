@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import android.app.Activity
 import android.content.Intent
@@ -41,14 +41,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.focus.Focus
-import com.aditya.wakey.focus.FocusConfig
-import com.aditya.wakey.focus.FocusStore
-import com.aditya.wakey.focus.ShieldVpnService
-import com.aditya.wakey.focus.formatMin
-import com.aditya.wakey.ui.theme.ClockStyle
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.focus.Focus
+import app.upwake.focus.FocusConfig
+import app.upwake.focus.FocusStore
+import app.upwake.focus.ShieldVpnService
+import app.upwake.focus.formatMin
+import app.upwake.ui.theme.ClockStyle
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
 import kotlinx.coroutines.delay
 
 @Composable
@@ -56,6 +56,7 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
     val ctx = LocalContext.current
     FocusStore.init(ctx)
     val cfg by FocusStore.cfg.collectAsState()
+    val pending by FocusStore.pending.collectAsState()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var localTick by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
@@ -65,6 +66,7 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
         }
     }
     val active = cfg.isActive(now)
+    LaunchedEffect(now) { FocusStore.applyPendingIfDue(ctx) }
     var timeSheet by remember { mutableStateOf<Int?>(null) } // 0 = bedtime, 1 = wake
 
     val vpnLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
@@ -120,10 +122,10 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
         item {
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                    .background(if (active) W.Accent else W.Card).padding(22.dp),
+                    .background(if (active) W.Dawn else W.Card).padding(22.dp),
             ) {
-                val fg = if (active) W.OnAccent else W.Text
-                val sub = if (active) W.OnAccent.copy(alpha = 0.6f) else W.Text2
+                val fg = if (active) W.OnDawn else W.Text
+                val sub = if (active) W.OnDawn.copy(alpha = 0.6f) else W.Text2
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(if (active) WIcons.Lock else WIcons.Moon, null, tint = fg, modifier = Modifier.size(18.dp))
                     Text(
@@ -143,7 +145,7 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
                 }
                 Text(
                     when {
-                        active -> "Strict mode. Settings are locked until ${formatMin(cfg.endMin)}."
+                        active -> "Strict mode. Apps stay blocked until ${formatMin(cfg.endMin)}."
                         cfg.enabled && cfg.apps.isEmpty() -> "Pick at least one app to block."
                         else -> "Blocked from 30 min before bed until 30 min after you wake."
                     },
@@ -156,14 +158,18 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
         item { SectionTitle("Schedule") }
         item {
             SectionCard {
-                SettingRow(
-                    WIcons.Moon, "Bedtime", formatMin(cfg.bedH * 60 + cfg.bedM),
-                    onClick = { if (!locked()) timeSheet = 0 },
-                )
+                val p = pending
+                val bedMin = if (p != null) p[0] * 60 + p[1] else cfg.bedH * 60 + cfg.bedM
+                val wakeMin = if (p != null) p[2] * 60 + p[3] else cfg.wakeH * 60 + cfg.wakeM
+                SettingRow(WIcons.Moon, "Bedtime", formatMin(bedMin), onClick = { timeSheet = 0 })
                 RowDivider()
-                SettingRow(
-                    WIcons.Sun, "Wake up", formatMin(cfg.wakeH * 60 + cfg.wakeM),
-                    onClick = { if (!locked()) timeSheet = 1 },
+                SettingRow(WIcons.Sun, "Wake up", formatMin(wakeMin), onClick = { timeSheet = 1 })
+            }
+            if (pending != null) {
+                Text(
+                    "New times start after tonight's session ends at ${formatMin(cfg.endMin)}.",
+                    color = W.Text2, fontSize = 12.sp, lineHeight = 16.sp,
+                    modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 8.dp),
                 )
             }
         }
@@ -211,7 +217,7 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
         item {
             SectionCard {
                 SetupRow(
-                    WIcons.Eye, "Usage access", "Lets Wakey see which app is open.", usageOk,
+                    WIcons.Eye, "Usage access", "Lets Upwake see which app is open.", usageOk,
                 ) { Health.open(ctx, listOf(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))) }
                 RowDivider()
                 SetupRow(
@@ -224,7 +230,7 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
                 }
                 RowDivider()
                 SetupRow(
-                    WIcons.Globe, "Wakey Shield",
+                    WIcons.Globe, "Upwake Shield",
                     if (needsShield) "Local website filter. Nothing leaves your phone." else "Turns on with website blocking.",
                     if (!needsShield) true else vpnConsented && shieldOn,
                 ) {
@@ -235,7 +241,7 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
                 RowDivider()
                 SetupRow(
                     WIcons.Lock, "Always-on VPN",
-                    "Recommended: choose Wakey Shield and turn on 'Always-on VPN' so it survives restarts.",
+                    "Recommended: choose Upwake Shield and turn on 'Always-on VPN' so it survives restarts.",
                     null,
                 ) { Health.open(ctx, listOf(Intent(Settings.ACTION_VPN_SETTINGS))) }
                 if (privateDns) {
@@ -248,7 +254,7 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
                 }
             }
             Text(
-                "Only one VPN can run at a time, so Wakey Shield pauses if you switch on another VPN.",
+                "Only one VPN can run at a time, so Upwake Shield pauses if you switch on another VPN.",
                 color = W.Text3, fontSize = 12.sp, lineHeight = 16.sp,
                 modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 8.dp),
             )
@@ -258,7 +264,10 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
     // ---------------------------------------------------------------- time sheet
     val which = timeSheet
     if (which != null) {
-        val startMin = if (which == 0) cfg.bedH * 60 + cfg.bedM else cfg.wakeH * 60 + cfg.wakeM
+        val p0 = pending
+        val curBed = if (p0 != null) p0[0] * 60 + p0[1] else cfg.bedH * 60 + cfg.bedM
+        val curWake = if (p0 != null) p0[2] * 60 + p0[3] else cfg.wakeH * 60 + cfg.wakeM
+        val startMin = if (which == 0) curBed else curWake
         var h12 by remember(which) { mutableIntStateOf(((startMin / 60) % 12).let { if (it == 0) 12 else it }) }
         var minute by remember(which) { mutableIntStateOf(startMin % 60) }
         var pm by remember(which) { mutableStateOf(startMin / 60 >= 12) }
@@ -280,7 +289,11 @@ fun FocusScreen(tick: Int, onPickApps: () -> Unit, modifier: Modifier = Modifier
                 "Save",
                 onClick = {
                     val h = (h12 % 12) + if (pm) 12 else 0
-                    update(if (which == 0) cfg.copy(bedH = h, bedM = minute) else cfg.copy(wakeH = h, wakeM = minute))
+                    val bed = if (which == 0) h * 60 + minute else curBed
+                    val wake = if (which == 1) h * 60 + minute else curWake
+                    val now2 = FocusStore.setTimes(ctx, bed / 60, bed % 60, wake / 60, wake % 60)
+                    if (now2) Focus.sync(ctx) else toast("Saved. New times start after this session ends.")
+                    localTick++
                     timeSheet = null
                 },
                 modifier = Modifier.fillMaxWidth(),

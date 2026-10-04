@@ -1,4 +1,4 @@
-package com.aditya.wakey.ring
+package app.upwake.ring
 
 import android.os.Build
 import android.os.Bundle
@@ -13,8 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.aditya.wakey.alarm.RingService
-import com.aditya.wakey.ui.theme.WakeyTheme
+import app.upwake.alarm.RingService
+import app.upwake.ui.theme.UpwakeTheme
 import kotlinx.coroutines.launch
 
 /**
@@ -54,7 +54,7 @@ class RingActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            WakeyTheme {
+            UpwakeTheme {
                 val alarm by RingService.current.collectAsState()
                 alarm?.let { RingFlow(it) }
             }

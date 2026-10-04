@@ -1,4 +1,4 @@
-package com.aditya.wakey.ring
+package app.upwake.ring
 
 import android.widget.Toast
 import androidx.compose.animation.core.RepeatMode
@@ -52,13 +52,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.alarm.RingService
-import com.aditya.wakey.data.Alarm
-import com.aditya.wakey.data.AlarmStore
-import com.aditya.wakey.alarm.RingStage
-import com.aditya.wakey.gratitude.GratitudeScreen
-import com.aditya.wakey.gratitude.GratitudeStore
-import com.aditya.wakey.ui.theme.Inter
+import app.upwake.alarm.RingService
+import app.upwake.data.Alarm
+import app.upwake.data.AlarmStore
+import app.upwake.alarm.RingStage
+import app.upwake.gratitude.GratitudeScreen
+import app.upwake.gratitude.GratitudeStore
+import app.upwake.ui.theme.Inter
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
@@ -66,17 +66,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
-import com.aditya.wakey.data.MissionType
-import com.aditya.wakey.mission.CameraPreview
-import com.aditya.wakey.mission.PhotoMatcher
-import com.aditya.wakey.mission.ScanFrame
-import com.aditya.wakey.mission.ShutterButton
-import com.aditya.wakey.mission.hasCamera
-import com.aditya.wakey.mission.rememberPreviewView
-import com.aditya.wakey.ui.theme.ClockStyle
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
-import com.aditya.wakey.ui.theme.icon
+import app.upwake.data.MissionType
+import app.upwake.mission.CameraPreview
+import app.upwake.mission.PhotoMatcher
+import app.upwake.mission.ScanFrame
+import app.upwake.mission.ShutterButton
+import app.upwake.mission.hasCamera
+import app.upwake.mission.rememberPreviewView
+import app.upwake.ui.theme.ClockStyle
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
+import app.upwake.ui.theme.icon
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import kotlinx.coroutines.Dispatchers
@@ -109,7 +109,8 @@ fun RingFlow(alarm: Alarm) {
             onDismiss = {
                 when {
                     !alarm.hasMission -> finishAlarm(ctx, alarm)
-                    !hasCamera(ctx) -> RingService.setStage(RingStage.WRITING)
+                    alarm.mission.usesCamera && !hasCamera(ctx) -> RingService.setStage(RingStage.WRITING)
+                    alarm.mission == MissionType.STEPS && !motionAvailable(ctx, alarm.mission) -> RingService.setStage(RingStage.WRITING)
                     else -> RingService.setStage(RingStage.MISSION)
                 }
             },
@@ -130,6 +131,20 @@ fun RingFlow(alarm: Alarm) {
                 )
                 MissionType.BARCODE -> BarcodeMission(
                     target = alarm.missionData ?: "",
+                    onSuccess = { RingService.setStage(RingStage.DONE) },
+                    onUnavailable = { RingService.setStage(RingStage.WRITING) },
+                )
+                MissionType.SQUATS, MissionType.PUSHUPS -> PoseMission(
+                    type = alarm.mission,
+                    target = alarm.missionData?.toIntOrNull() ?: alarm.mission.counts.first(),
+                    onAttempt = onAttempt,
+                    onSuccess = { RingService.setStage(RingStage.DONE) },
+                    onUnavailable = { RingService.setStage(RingStage.WRITING) },
+                )
+                MissionType.STEPS -> MotionMission(
+                    type = alarm.mission,
+                    target = alarm.missionData?.toIntOrNull() ?: alarm.mission.counts.first(),
+                    onAttempt = onAttempt,
                     onSuccess = { RingService.setStage(RingStage.DONE) },
                     onUnavailable = { RingService.setStage(RingStage.WRITING) },
                 )
@@ -176,7 +191,12 @@ private fun AlarmFace(
         animationSpec = infiniteRepeatable(tween(1800), RepeatMode.Restart), label = "t",
     )
 
-    Box(Modifier.fillMaxSize().background(W.Bg).systemBarsPadding()) {
+    val bgCtx = LocalContext.current
+    val bgKey = remember { RingBg.key(bgCtx) }
+    val bgPhoto = remember { if (bgKey == RingBg.PHOTO) RingBg.loadPhoto(bgCtx) else null }
+    Box(
+        Modifier.fillMaxSize().ringBackground(bgKey, bgPhoto).systemBarsPadding(),
+    ) {
         Column(
             Modifier.fillMaxWidth().padding(top = 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -214,13 +234,13 @@ private fun AlarmFace(
                         scaleX = 1f + t * 1.1f
                         scaleY = 1f + t * 1.1f
                         alpha = (1f - t) * 0.35f
-                    }.border(1.5.dp, W.Text, CircleShape),
+                    }.border(1.5.dp, W.Dawn, CircleShape),
                 )
             }
             Box(
-                Modifier.size(120.dp).clip(CircleShape).background(W.Card),
+                Modifier.size(120.dp).clip(CircleShape).background(W.DawnDim),
                 contentAlignment = Alignment.Center,
-            ) { Icon(WIcons.AlarmClock, null, tint = W.Text, modifier = Modifier.size(52.dp)) }
+            ) { Icon(WIcons.AlarmClock, null, tint = W.Dawn, modifier = Modifier.size(52.dp)) }
         }
 
         Column(
@@ -244,17 +264,17 @@ private fun AlarmFace(
             }
             Row(
                 Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(20.dp))
-                    .background(W.Accent).clickable(onClick = onDismiss),
+                    .background(W.Dawn).clickable(onClick = onDismiss),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (alarm.hasMission) {
-                    Icon(alarm.mission.icon(), null, tint = W.OnAccent, modifier = Modifier.size(22.dp))
+                    Icon(alarm.mission.icon(), null, tint = W.OnDawn, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
                 }
                 Text(
                     if (alarm.hasMission) "Start mission" else "Dismiss",
-                    color = W.OnAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                    color = W.OnDawn, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                 )
             }
             if (alarm.hasMission) {
@@ -294,7 +314,7 @@ private fun MissionHost(
         content { attempt++ }
         LinearProgressIndicator(
             progress = { remaining / seconds.toFloat() },
-            color = W.Accent, trackColor = Color(0x33FFFFFF),
+            color = W.Dawn, trackColor = Color(0x33FFFFFF),
             modifier = Modifier.fillMaxWidth().systemBarsPadding().height(4.dp),
         )
     }
@@ -455,7 +475,7 @@ private fun WritingMission(onAttempt: () -> Unit, onSuccess: () -> Unit) {
             for (i in 0 until WRITING_COUNT) {
                 Box(
                     Modifier.weight(1f).padding(end = if (i < WRITING_COUNT - 1) 6.dp else 0.dp).height(4.dp)
-                        .clip(RoundedCornerShape(2.dp)).background(if (i < done) W.Accent else W.Card2),
+                        .clip(RoundedCornerShape(2.dp)).background(if (i < done) W.Dawn else W.Card2),
                 )
             }
         }
@@ -499,7 +519,7 @@ private fun WritingMission(onAttempt: () -> Unit, onSuccess: () -> Unit) {
 
 // ------------------------------------------------------------------ done
 
-/** Silences the alarm; real alarms then require today's gratitude before Wakey lets go. */
+/** Silences the alarm; real alarms then require today's gratitude before Upwake lets go. */
 private fun finishAlarm(ctx: android.content.Context, alarm: Alarm) {
     if (alarm.id != AlarmStore.QUICK_TEST_ID && !GratitudeStore.writtenToday(ctx)) {
         RingService.toGratitude()
@@ -521,9 +541,9 @@ private fun DoneScreen(alarm: Alarm) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            Modifier.size(140.dp).background(W.Card, CircleShape),
+            Modifier.size(140.dp).background(W.DawnDim, CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Icon(WIcons.Sun, null, tint = W.Text, modifier = Modifier.size(64.dp)) }
+        ) { Icon(WIcons.Check, null, tint = W.Dawn, modifier = Modifier.size(64.dp)) }
         Spacer(Modifier.height(28.dp))
         Text("Mission complete", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Text("You're up.", color = W.Text2, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))

@@ -1,9 +1,9 @@
-package com.aditya.wakey.alarm
+package app.upwake.alarm
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.aditya.wakey.data.AlarmStore
+import app.upwake.data.AlarmStore
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
@@ -19,20 +19,26 @@ class AlarmReceiver : BroadcastReceiver() {
                 AlarmScheduler.schedule(ctx, alarm) // queue next occurrence
             }
         }
-        RingService.start(ctx, id)
+        RingService.start(ctx, id, gratitudeOnly = kind == AlarmScheduler.KIND_RESUME_GRATITUDE)
     }
 }
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
+        // Exported for system broadcasts only; ignore anything else another app might send.
+        if (intent.action !in SYSTEM_ACTIONS) return
         AlarmScheduler.rescheduleAll(ctx)
-        com.aditya.wakey.focus.Focus.sync(ctx)
+        app.upwake.focus.Focus.sync(ctx)
         // Phone was switched off mid-alarm? Pick up exactly where it stopped.
         RingService.pending(ctx)?.let { (id, gratitude) ->
-            try {
-                RingService.start(ctx, id, gratitude)
-            } catch (_: Exception) {
-            }
+            AlarmScheduler.scheduleResume(ctx, id, gratitude)
         }
     }
 }
+
+private val SYSTEM_ACTIONS = setOf(
+    Intent.ACTION_BOOT_COMPLETED,
+    Intent.ACTION_TIME_CHANGED,
+    Intent.ACTION_TIMEZONE_CHANGED,
+    Intent.ACTION_MY_PACKAGE_REPLACED,
+)

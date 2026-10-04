@@ -1,4 +1,4 @@
-package com.aditya.wakey.mission
+package app.upwake.mission
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.aditya.wakey.ui.theme.W
+import app.upwake.ui.theme.W
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
@@ -105,7 +105,7 @@ fun CameraPreview(
                 p.unbindAll()
                 p.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, *useCases.toTypedArray())
             } catch (e: Exception) {
-                Log.e("WakeyCam", "Camera failed", e)
+                Log.e("UpwakeCam", "Camera failed", e)
                 errorCb(e.message ?: "Camera error")
             }
         }, ContextCompat.getMainExecutor(ctx))
@@ -174,7 +174,7 @@ fun CameraGate(content: @Composable () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 androidx.compose.material3.Icon(
-                    com.aditya.wakey.ui.theme.WIcons.Camera, null,
+                    app.upwake.ui.theme.WIcons.Camera, null,
                     tint = W.Accent, modifier = Modifier.size(44.dp),
                 )
             }

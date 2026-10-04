@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -27,13 +27,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.gratitude.GratitudeStore
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.gratitude.GratitudeStore
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -45,6 +50,7 @@ fun JournalScreen(onBack: () -> Unit) {
     GratitudeStore.init(ctx)
     val entries by GratitudeStore.entries.collectAsState()
     val fmt = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault())
+    var deleting by remember { mutableStateOf<Long?>(null) }
 
     Column(Modifier.fillMaxSize().background(W.Bg).systemBarsPadding()) {
         Row(
@@ -90,7 +96,16 @@ fun JournalScreen(onBack: () -> Unit) {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(W.Card).padding(18.dp),
                 ) {
-                    Text(fmt.format(Date(e.time)), color = W.Text2, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            fmt.format(Date(e.time)), color = W.Text2, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Box(
+                            Modifier.size(36.dp).clip(CircleShape).clickable { deleting = e.time },
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(WIcons.Trash, "Delete", tint = W.Text2, modifier = Modifier.size(18.dp)) }
+                    }
                     if (e.topic.isNotBlank()) {
                         Text(
                             e.topic, color = W.Text2, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
@@ -104,5 +119,22 @@ fun JournalScreen(onBack: () -> Unit) {
                 }
             }
         }
+    }
+    deleting?.let { t ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            containerColor = W.Card,
+            title = { Text("Delete this entry?", color = W.Text) },
+            text = { Text("It will be removed from your journal for good.", color = W.Text2) },
+            confirmButton = {
+                TextButton(onClick = {
+                    GratitudeStore.delete(ctx, t)
+                    deleting = null
+                }) { Text("Delete", color = W.Red) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleting = null }) { Text("Cancel", color = W.Dawn) }
+            },
+        )
     }
 }

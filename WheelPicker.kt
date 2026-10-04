@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -26,8 +26,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.ui.theme.ClockStyle
-import com.aditya.wakey.ui.theme.W
+import app.upwake.ui.theme.ClockStyle
+import app.upwake.ui.theme.W
 
 val WHEEL_ITEM_H = 60.dp
 

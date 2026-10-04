@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import android.app.Activity
 import android.graphics.BitmapFactory
@@ -54,14 +54,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.IntentCompat
-import com.aditya.wakey.alarm.AlarmScheduler
-import com.aditya.wakey.data.Alarm
-import com.aditya.wakey.data.MissionType
-import com.aditya.wakey.mission.PhotoMatcher
-import com.aditya.wakey.ui.theme.Inter
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
-import com.aditya.wakey.ui.theme.icon
+import app.upwake.alarm.AlarmScheduler
+import app.upwake.data.Alarm
+import app.upwake.data.MissionType
+import app.upwake.mission.PhotoMatcher
+import app.upwake.ui.theme.Inter
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
+import app.upwake.ui.theme.icon
 
 private enum class Sheet { NONE, MISSION, SNOOZE }
 
@@ -87,6 +87,7 @@ fun EditAlarmScreen(
 
     fun current(): Alarm = alarm.copy(hour = (h12 % 12) + if (pm) 12 else 0, minute = minute)
 
+    val camPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
         if (res.resultCode == Activity.RESULT_OK) {
             val uri = res.data?.let {
@@ -228,8 +229,10 @@ fun EditAlarmScreen(
                             when {
                                 alarm.hasMission && alarm.mission == MissionType.PHOTO ->
                                     "Retake the registered photo to turn the alarm off."
-                                alarm.hasMission ->
+                                alarm.hasMission && alarm.mission == MissionType.BARCODE ->
                                     "Scan the registered barcode to turn the alarm off."
+                                alarm.hasMission ->
+                                    "${alarm.missionData} ${alarm.mission.title.lowercase()} to turn the alarm off."
                                 else -> "Add a mission you can only finish out of bed."
                             },
                             color = W.Text2, fontSize = 13.sp, lineHeight = 17.sp,
@@ -383,6 +386,29 @@ fun EditAlarmScreen(
             ) {
                 sheet = Sheet.NONE
                 onSetupMission(current() to MissionType.BARCODE)
+            }
+            for (t in listOf(MissionType.STEPS, MissionType.SQUATS, MissionType.PUSHUPS)) {
+                Spacer(Modifier.height(10.dp))
+                MissionOption(
+                    icon = t.icon(), title = t.title,
+                    desc = when (t) {
+                        MissionType.STEPS -> "Walk around with your phone until you hit your step count."
+                        MissionType.SQUATS -> "Prop your phone up 2-3 m away. AI watches your form and only counts full squats."
+                        else -> "Put your phone on the floor, side-on to you. AI counts only full push-ups with a straight body."
+                    },
+                    selected = alarm.hasMission && alarm.mission == t,
+                ) {
+                    if (alarm.mission != t) onChange(current().copy(mission = t, missionData = t.counts.first().toString()))
+                    if (t.usesCamera && !app.upwake.mission.hasCamera(ctx)) camPermission.launch(android.Manifest.permission.CAMERA)
+                }
+                if (alarm.hasMission && alarm.mission == t) {
+                    Spacer(Modifier.height(8.dp))
+                    ChipRow(
+                        options = t.counts, selected = alarm.missionData?.toIntOrNull() ?: t.counts.first(),
+                        label = { "$it" },
+                        onSelect = { onChange(current().copy(missionData = it.toString())) },
+                    )
+                }
             }
             if (alarm.hasMission) {
                 Spacer(Modifier.height(16.dp))

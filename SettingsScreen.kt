@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +22,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,9 +36,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.gratitude.GratitudeStore
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.gratitude.GratitudeStore
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
 
 @Composable
 fun SettingsScreen(
@@ -40,6 +46,8 @@ fun SettingsScreen(
     onChanged: () -> Unit,
     onQuickTest: () -> Unit,
     onJournal: () -> Unit,
+    onAbout: () -> Unit,
+    onLegal: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val ctx = LocalContext.current
@@ -54,7 +62,13 @@ fun SettingsScreen(
         onChanged()
     }
 
+    var disclosure by remember { mutableStateOf<Health.Check?>(null) }
+
     fun fix(c: Health.Check) {
+        if (c.key == "guard") {
+            disclosure = c
+            return
+        }
         when (val f = c.fix) {
             is Health.Fix.Permission -> {
                 pendingFallback = f
@@ -64,51 +78,108 @@ fun SettingsScreen(
         }
     }
 
+    var showAll by remember { mutableStateOf(false) }
+    var bgSheet by remember { mutableStateOf(false) }
+    var bgTitle by remember { mutableStateOf(app.upwake.ring.RingBg.title(ctx)) }
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null && app.upwake.ring.RingBg.savePhoto(ctx, uri)) bgTitle = "Your photo"
+        bgSheet = false
+    }
+    val needsFix = checks.filter { it.ok != true }
+    val shown = if (showAll) checks else needsFix
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp),
     ) {
         item {
-            Row(Modifier.padding(start = 6.dp, end = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.Bottom) {
-                Text(
-                    "Settings", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = W.Text,
-                    letterSpacing = (-0.5).sp, modifier = Modifier.weight(1f),
-                )
-                Text(
-                    if (bad == 0) "All set" else "$bad to fix",
-                    color = if (bad == 0) W.Text2 else W.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
-            }
+            Text(
+                "Settings", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = W.Text,
+                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+            )
         }
 
-        item { SectionTitle("Reliability") }
+        item { SectionTitle("Permissions") }
         item {
             SectionCard {
-                checks.forEachIndexed { i, c ->
+                shown.forEachIndexed { i, c ->
                     if (i > 0) RowDivider()
                     CompactCheck(c) { fix(c) }
                 }
+                if (shown.isNotEmpty()) RowDivider()
+                SettingRow(
+                    if (bad == 0) WIcons.Check else WIcons.Warning,
+                    if (showAll) "Hide details" else if (bad == 0) "All set" else "$bad to fix",
+                    value = if (showAll) null else "${checks.size - needsFix.size}/${checks.size}",
+                    onClick = { showAll = !showAll },
+                )
             }
         }
 
-        item { SectionTitle("More") }
+        item { SectionTitle("Alarm") }
         item {
             SectionCard {
+                SettingRow(WIcons.Sun, "Alarm background", value = bgTitle, onClick = { bgSheet = true })
+                RowDivider()
+                SettingRow(WIcons.Play, "Test alarm", value = "in 10 s", onClick = onQuickTest)
+                RowDivider()
                 SettingRow(
                     WIcons.Book, "Gratitude journal",
                     value = "${GratitudeStore.all(ctx).size}",
                     onClick = onJournal,
                 )
-                RowDivider()
-                SettingRow(WIcons.Play, "Test alarm", value = "in 10 s", onClick = onQuickTest)
             }
-            Text(
-                "Test: tap, lock your phone, and the alarm should take over in 10 seconds.",
-                color = W.Text3, fontSize = 12.sp, lineHeight = 16.sp,
-                modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 8.dp),
+        }
+
+        item { SectionTitle("About") }
+        item {
+            SectionCard {
+                SettingRow(WIcons.Shield, "Terms & Privacy", onClick = onLegal)
+                RowDivider()
+                SettingRow(WIcons.Gear, "About Upwake", value = "v${app.upwake.BuildConfig.VERSION_NAME}", onClick = onAbout)
+            }
+        }
+    }
+
+    if (bgSheet) {
+        WSheet("Alarm background", onDismiss = { bgSheet = false }) {
+            val current = app.upwake.ring.RingBg.key(ctx)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                app.upwake.ring.RingBg.presets.forEach { pr ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            Modifier.size(54.dp).clip(RoundedCornerShape(14.dp)).background(pr.brush)
+                                .border(2.dp, if (current == pr.key) W.Dawn else W.Line, RoundedCornerShape(14.dp))
+                                .clickable {
+                                    app.upwake.ring.RingBg.setKey(ctx, pr.key)
+                                    bgTitle = pr.title
+                                    bgSheet = false
+                                },
+                        )
+                        Text(pr.title, color = W.Text2, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            SecondaryButton(
+                "Choose a photo",
+                onClick = {
+                    photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+
+    disclosure?.let { c ->
+        StrictModeDisclosure(
+            onAgree = {
+                disclosure = null
+                val f = c.fix
+                if (f is Health.Fix.Open) Health.open(ctx, f.intents)
+            },
+            onDismiss = { disclosure = null },
+        )
     }
 }
 

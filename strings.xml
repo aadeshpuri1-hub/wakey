@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Upwake</string>
+    <string name="guard_label">Upwake turn-off prevention</string>
+    <string name="guard_description">Only active while an Upwake alarm is ringing or your morning check-in is unfinished. It closes the power menu and notification shade and brings the alarm back if you open another app, so you can\'t switch the alarm off before completing your mission. Upwake does not read, collect or share any content from your screen.</string>
+</resources>

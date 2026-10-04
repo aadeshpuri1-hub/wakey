@@ -1,10 +1,16 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,7 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.ui.theme.WIcons
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -47,14 +53,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.aditya.wakey.alarm.AlarmScheduler
-import com.aditya.wakey.data.Alarm
-import com.aditya.wakey.data.AlarmStore
-import com.aditya.wakey.data.MissionType
-import com.aditya.wakey.focus.Focus
-import com.aditya.wakey.focus.FocusStore
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WakeyTheme
+import app.upwake.alarm.AlarmScheduler
+import app.upwake.data.Alarm
+import app.upwake.data.AlarmStore
+import app.upwake.data.MissionType
+import app.upwake.focus.Focus
+import app.upwake.focus.FocusStore
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.UpwakeTheme
 import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
@@ -64,7 +70,7 @@ class MainActivity : ComponentActivity() {
         AlarmStore.init(this)
         AlarmScheduler.rescheduleAll(this)
         Focus.sync(this)
-        setContent { WakeyTheme { AppRoot() } }
+        setContent { UpwakeTheme { AppRoot() } }
     }
 }
 
@@ -78,7 +84,14 @@ fun AppRoot() {
     var setup by remember { mutableStateOf<MissionType?>(null) }
     var healthTick by remember { mutableIntStateOf(0) }
     var pickingApps by remember { mutableStateOf(false) }
+    var settings by remember { mutableStateOf(false) }
+    var worldEditing by remember { mutableStateOf(false) }
+    var worldAdding by remember { mutableStateOf(false) }
     var journal by remember { mutableStateOf(false) }
+    var about by remember { mutableStateOf(false) }
+    var onboarded by remember { mutableStateOf(Prefs.onboarded(ctx)) }
+    var legalOk by remember { mutableStateOf(LegalPrefs.accepted(ctx)) }
+    var legalTab by remember { mutableStateOf<Int?>(null) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         healthTick++
@@ -91,8 +104,8 @@ fun AppRoot() {
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         healthTick++
     }
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= 33 &&
+    LaunchedEffect(onboarded) {
+        if (onboarded && Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) !=
             android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
@@ -113,6 +126,51 @@ fun AppRoot() {
 
     val cur = editing
     when {
+        !legalOk -> LegalScreen(onAccept = {
+            LegalPrefs.accept(ctx)
+            legalOk = true
+        })
+
+        !onboarded -> OnboardingScreen(onFinish = { create ->
+            Prefs.setOnboarded(ctx)
+            onboarded = true
+            healthTick++
+            if (create) {
+                isNew = true
+                editing = Alarm(id = AlarmStore.newId(ctx), hour = 7, minute = 0, days = Alarm.WEEKDAYS)
+            }
+        })
+
+        legalTab != null -> LegalScreen(onBack = { legalTab = null }, startTab = legalTab ?: 0)
+
+        settings && !about && !journal && legalTab == null -> {
+            BackHandler { settings = false }
+            Column(Modifier.fillMaxSize().background(W.Bg).systemBarsPadding()) {
+                Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.clip(RoundedCornerShape(10.dp)).clickable { settings = false }.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(WIcons.Close, "Close", tint = W.Dawn, modifier = Modifier.size(20.dp))
+                        Text("Done", color = W.Dawn, fontSize = 17.sp, modifier = Modifier.padding(start = 6.dp))
+                    }
+                }
+                SettingsScreen(
+                    tick = healthTick,
+                    onChanged = { healthTick++ },
+                    onJournal = { journal = true },
+                    onAbout = { about = true },
+                    onLegal = { legalTab = 0 },
+                    onQuickTest = {
+                        AlarmScheduler.scheduleTest(ctx, AlarmStore.QUICK_TEST_ID, 10)
+                        toast("Lock your phone now. Test alarm in 10 seconds.")
+                    },
+                )
+            }
+        }
+
+        about -> AboutScreen(onBack = { about = false }, onLegal = { legalTab = it })
+
         pickingApps -> {
             val fc = FocusStore.get(ctx)
             AppPickerScreen(
@@ -171,38 +229,41 @@ fun AppRoot() {
             },
         )
 
+        worldAdding -> WorldClockScreen(
+            editing = false,
+            adding = true,
+            onAddingChange = { worldAdding = it },
+        )
+
         else -> Scaffold(
             containerColor = W.Bg,
-            bottomBar = {
-                BottomBar(
-                    tab = tab, problems = problems, onTab = { tab = it },
+            topBar = {
+                TopBar(
+                    problems = problems,
+                    onSettings = { settings = true },
+                    tab = tab,
+                    worldEditing = worldEditing,
+                    onWorldEdit = { worldEditing = !worldEditing },
+                    onAdd = {
+                        when (tab) {
+                            0 -> {
+                                val now = Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, 8) }
+                                isNew = true
+                                editing = Alarm(
+                                    id = AlarmStore.newId(ctx),
+                                    hour = now.get(Calendar.HOUR_OF_DAY),
+                                    minute = 0,
+                                )
+                            }
+                            3 -> { worldEditing = false; worldAdding = true }
+                        }
+                    },
                 )
             },
-            floatingActionButton = {
-                if (tab == 0) {
-                    Box(
-                        Modifier.size(62.dp).clip(CircleShape).background(W.Accent).clickable {
-                            val now = Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, 8) }
-                            isNew = true
-                            editing = Alarm(
-                                id = AlarmStore.newId(ctx),
-                                hour = now.get(Calendar.HOUR_OF_DAY),
-                                minute = 0,
-                            )
-                        },
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(WIcons.Plus, "New alarm", tint = W.OnAccent, modifier = Modifier.size(28.dp)) }
-                }
-            },
+            bottomBar = { BottomBar(tab = tab, onTab = { tab = it; worldEditing = false }) },
         ) { pad ->
-            if (tab == 1) {
-                FocusScreen(
-                    tick = healthTick,
-                    onPickApps = { pickingApps = true },
-                    modifier = Modifier.padding(pad),
-                )
-            } else if (tab == 0) {
-                AlarmListScreen(
+            when (tab) {
+                0 -> AlarmListScreen(
                     alarms = alarms,
                     problems = problems,
                     modifier = Modifier.padding(pad),
@@ -211,49 +272,87 @@ fun AppRoot() {
                         val saved = persist(a.copy(enabled = on))
                         if (on) toast(AlarmScheduler.ringInText(AlarmScheduler.nextTrigger(saved)))
                     },
-                    onFix = { tab = 2 },
+                    onFix = { settings = true },
                 )
-            } else {
-                SettingsScreen(
+                1 -> FocusScreen(
                     tick = healthTick,
-                    onChanged = { healthTick++ },
+                    onPickApps = { pickingApps = true },
                     modifier = Modifier.padding(pad),
-                    onJournal = { journal = true },
-                    onQuickTest = {
-                        AlarmScheduler.scheduleTest(ctx, AlarmStore.QUICK_TEST_ID, 10)
-                        toast("Lock your phone now. Test alarm in 10 seconds.")
-                    },
+                )
+                2 -> StopwatchScreen(Modifier.padding(pad))
+                else -> WorldClockScreen(
+                    editing = worldEditing,
+                    adding = false,
+                    onAddingChange = { worldAdding = it },
+                    modifier = Modifier.padding(pad),
                 )
             }
         }
     }
 }
 
+/** Apple-style nav row: Settings top-left, contextual actions top-right. */
 @Composable
-private fun BottomBar(tab: Int, problems: Int, onTab: (Int) -> Unit) {
+private fun TopBar(
+    problems: Int,
+    onSettings: () -> Unit,
+    tab: Int,
+    worldEditing: Boolean,
+    onWorldEdit: () -> Unit,
+    onAdd: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().background(W.Bg).statusBarsPadding().height(48.dp).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onSettings),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(WIcons.Gear, "Settings", tint = W.Dawn, modifier = Modifier.size(24.dp))
+            if (problems > 0) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = 8.dp)
+                        .size(9.dp).clip(CircleShape).background(W.Red),
+                )
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        if (tab == 3) {
+            Text(
+                if (worldEditing) "Done" else "Edit", color = W.Dawn, fontSize = 17.sp,
+                fontWeight = if (worldEditing) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onWorldEdit).padding(10.dp),
+            )
+        }
+        if (tab == 0 || tab == 3) {
+            Box(
+                Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onAdd),
+                contentAlignment = Alignment.Center,
+            ) { Icon(WIcons.Plus, "Add", tint = W.Dawn, modifier = Modifier.size(26.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun BottomBar(tab: Int, onTab: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().background(W.Bg).navigationBarsPadding()) {
-        HorizontalDivider(color = W.Line, thickness = 1.dp)
-        Row(Modifier.fillMaxWidth().height(64.dp)) {
-            listOf(WIcons.AlarmClock to "Alarm", WIcons.Moon to "Focus", WIcons.Gear to "Settings").forEachIndexed { i, (icon, label) ->
-                val on = tab == i
+        HorizontalDivider(color = W.Line, thickness = 0.5.dp)
+        Row(Modifier.fillMaxWidth().height(58.dp)) {
+            listOf(
+                WIcons.AlarmClock to "Alarm",
+                WIcons.Moon to "Focus",
+                WIcons.Stopwatch to "Stopwatch",
+                WIcons.Globe to "World Clock",
+            ).forEachIndexed { i, (icon, label) ->
+                val c = if (tab == i) W.Dawn else W.Text2
                 Column(
                     Modifier.weight(1f).fillMaxHeight().clickable { onTab(i) },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Box {
-                        Icon(icon, label, tint = if (on) W.Text else W.Text3, modifier = Modifier.size(24.dp))
-                        if (i == 2 && problems > 0) {
-                            Box(
-                                Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-2).dp)
-                                    .size(8.dp).clip(CircleShape).background(W.Accent),
-                            )
-                        }
-                    }
-                    Text(
-                        label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                        color = if (on) W.Text else W.Text3, modifier = Modifier.padding(top = 4.dp),
-                    )
+                    Icon(icon, label, tint = c, modifier = Modifier.size(24.dp))
+                    Text(label, fontSize = 10.sp, fontWeight = FontWeight.Medium, color = c, modifier = Modifier.padding(top = 3.dp))
                 }
             }
         }

@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui.theme
+package app.upwake.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -10,22 +10,37 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.R
+import app.upwake.R
 
-/** Monochrome palette: jet black, grey-black surfaces, white as the only accent. */
+/**
+ * Upwake palette, modelled on Apple's Clock app in dark mode: true black, iOS grouped-card
+ * greys, white type, iOS system orange as the accent, and iOS green / red for start & stop.
+ */
 object W {
     val Bg = Color(0xFF000000)
-    val Card = Color(0xFF111111)
-    val Card2 = Color(0xFF1C1C1C)
-    val Line = Color(0xFF242424)
+    val Card = Color(0xFF1C1C1E)      // iOS secondarySystemGroupedBackground
+    val Card2 = Color(0xFF2C2C2E)     // iOS tertiary fill
+    val Line = Color(0xFF38383A)      // iOS separator
     val Text = Color(0xFFFFFFFF)
-    val Text2 = Color(0xFF8C8C8C)
-    val Text3 = Color(0xFF4D4D4D)
+    val Text2 = Color(0xFF8E8E93)     // iOS secondaryLabel
+    val Text3 = Color(0xFF636366)     // iOS systemGray2
     val Accent = Color(0xFFFFFFFF)
     val OnAccent = Color(0xFF000000)
     val AccentDim = Color(0x14FFFFFF)
-    val Good = Color(0xFFFFFFFF)
+    val Good = Color(0xFF30D158)
     val Warn = Color(0xFFBFBFBF)
+
+    /** iOS system orange, the Clock app's tint. */
+    val Dawn = Color(0xFFFF9F0A)
+    val DawnDim = Color(0x33FF9F0A)
+    val DawnGlow = Color(0x59FF9F0A)
+    val OnDawn = Color(0xFF000000)
+
+    /** iOS green / red, used for switches and Start / Stop. */
+    val Green = Color(0xFF30D158)
+    val GreenDim = Color(0x3330D158)
+    val Red = Color(0xFFFF453A)
+    val RedDim = Color(0x33FF453A)
 }
 
 val Inter = FontFamily(
@@ -45,7 +60,7 @@ val ClockStyle = TextStyle(
 
 private fun TextStyle.inter() = copy(fontFamily = Inter, fontFeatureSettings = "tnum")
 
-private val WakeyType = Typography().let { t ->
+private val UpwakeType = Typography().let { t ->
     Typography(
         displayLarge = t.displayLarge.inter(),
         displayMedium = t.displayMedium.inter(),
@@ -66,9 +81,9 @@ private val WakeyType = Typography().let { t ->
 }
 
 @Composable
-fun WakeyTheme(content: @Composable () -> Unit) {
+fun UpwakeTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        typography = WakeyType,
+        typography = UpwakeType,
         colorScheme = darkColorScheme(
             primary = W.Accent,
             onPrimary = W.OnAccent,

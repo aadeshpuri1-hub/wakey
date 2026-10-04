@@ -1,42 +1,72 @@
-# Wakey ⏰
+<div align="center">
 
-An alarm clock you have to get out of bed to turn off. Inspired by Alarmy.
+# Upwake
 
-## What's different from WakeUpGuard (why the screen will actually pop up)
+**The alarm clock you can't snooze your way out of.**
 
-| Problem last time | What Wakey does |
+Wake-up missions · Strict mode · Morning gratitude · Sleep-focus blocker
+
+![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-black)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.2-black)
+![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-black)
+![Status](https://img.shields.io/badge/status-pre--release-FFB547)
+
+</div>
+
+---
+
+## What it does
+
+| Feature | How it works |
 |---|---|
-| Alarm screen didn't appear | Uses **3 layers**: a full-screen alarm notification, a direct launch using "Display over other apps", and a watchdog that brings the screen back every 3 seconds until you finish the mission |
-| Phone was unlocked, so only a small banner showed | The "Display over other apps" permission lets it take over the screen anyway |
-| Android 14 blocks full-screen alarms by default | Built-in **Settings → Alarm reliability** checklist with one-tap fixes |
-| Xiaomi/Oppo/Vivo phones kill the app | Checklist shows Autostart and lock-screen pop-up settings for your brand |
-| Press Home or Back to escape | Back does nothing. Home or the power button just brings the alarm back |
-| Sound stops if the screen closes | Sound lives in a foreground service. Only finishing the mission stops it |
+| **Wake-up missions** | Turn the alarm off only by photographing a registered spot (e.g. your sink) or scanning a registered barcode (e.g. toothpaste). Matching runs fully on-device. |
+| **Writing backup** | Away from home? Copy four paragraphs exactly instead. Progress is kept if you wander off. |
+| **Strict mode** | Until the mission is done the alarm covers every app, closes the power menu and notification shade, ignores the volume keys, and resumes after a reboot. |
+| **Morning gratitude** | After the alarm, a daily topic and a 25-word reflection, saved to a private journal. |
+| **Sleep focus** | Chosen social apps are blocked from 30 min before bedtime until 30 min after wake-up. Their websites are blocked in browsers too. |
+| **Upwake Shield** | Local DNS filter that blocks adult websites (Cloudflare Family DNS). Nothing is routed through any Upwake server. |
 
-## Features
-- Alarmy-style dark UI: scroll-wheel time picker, repeat days, labels, volume, vibration, snooze (limited to 3)
-- **📸 Photo mission**: register a spot (bathroom sink, kitchen) and photograph it again to dismiss. Works offline. Match strictness can be Easy, Normal or Hard.
-- **🏷️ Barcode mission**: scan a registered barcode (toothpaste, shampoo...) to dismiss. Works offline.
-- The volume drops while you're doing the mission. If you stop for 60 s it goes back to full blast.
-- Safety valve: after 3 minutes of ringing, "Can't do the mission?" lets you type a long sentence instead, in case you lost the barcode.
-- **Test button**: rings in 10 seconds so you can lock your phone and check it works.
+## Design
 
-## Build the APK (no Android Studio needed)
-1. Create a new repo on github.com. Public is fine.
-2. Upload everything in this folder, **including the hidden `.github` folder**.
-   - If the web uploader skips `.github`: click **Add file → Create new file**, type the name `.github/workflows/build.yml`, and paste in the contents of `ci-build.yml`.
-3. Open the **Actions** tab. The "Build APK" job runs automatically and takes about 5 minutes.
-4. Open **Releases** (right side of the repo page) on your phone, tap `Wakey.apk`, and install it. Allow "Install unknown apps" if asked.
-5. Open Wakey, go to **Settings**, and make everything green. Then tap **Ring a test alarm in 10 s** and lock your phone.
+Monochrome: jet black, grey-black surfaces, white for primary actions. One signature accent, **Dawn** (`#FFB547`), reserved for "alive" moments: on, ringing, active, complete. Typeface: Inter / Inter Display.
 
-Every push builds a new release. New versions install as updates because the signing key is fixed.
+## Tech
 
-## Project layout
+- Kotlin 2.2, Jetpack Compose (Material 3), single-activity UI + dedicated ring activity
+- `AlarmManager.setAlarmClock` + foreground service + full-screen intent + overlay guard
+- CameraX + ML Kit barcode scanning (bundled, offline)
+- `VpnService` (DNS-only) and `UsageStatsManager` for sleep focus
+- `AccessibilityService` for strict mode (active only during an alarm)
+- minSdk 26 · targetSdk 36
+
+## Project structure
+
 ```
-app/src/main/java/com/aditya/wakey/
-  alarm/    AlarmScheduler (setAlarmClock), Receivers (fire + boot), RingService (sound, vibration, watchdog)
-  ring/     RingActivity (lock-screen takeover) + RingScreens (alarm face, missions)
-  mission/  CameraX + ML Kit barcode, PhotoMatcher (offline image similarity)
-  ui/       Home list, editor, wheel picker, settings checklist, mission setup
-  data/     Alarm model + JSON store
+app/src/main/java/app/upwake/
+├── alarm/       scheduling, RingService, boot resume, strict-mode guard
+├── ring/        ringing flow, missions, writing backup
+├── mission/     camera, barcode, photo matching
+├── focus/       sleep-focus blocker, Upwake Shield (DNS)
+├── gratitude/   morning check-in and journal
+├── data/        alarm model and storage
+└── ui/          screens, onboarding, design system (theme/)
 ```
+
+## Building
+
+Every push to `main` runs GitHub Actions and publishes a signed **APK** (for direct install) and **AAB** (for Google Play) under **Releases**.
+
+Local build (Android Studio Ladybug or newer, JDK 17):
+
+```bash
+gradle assembleRelease bundleRelease
+```
+
+## Privacy
+
+Upwake has no accounts, servers or analytics. All data stays on the device. See [PRIVACY.md](PRIVACY.md), [TERMS.md](TERMS.md) and [SECURITY.md](SECURITY.md).
+
+## License
+
+Proprietary. © 2026 Aditya Puri. All rights reserved. See [LICENSE](LICENSE).
+Inter typeface © The Inter Project Authors, SIL Open Font License 1.1 ([FONT_LICENSE_Inter.txt](FONT_LICENSE_Inter.txt)).

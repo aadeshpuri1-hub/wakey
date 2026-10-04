@@ -1,4 +1,4 @@
-package com.aditya.wakey.gratitude
+package app.upwake.gratitude
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -35,10 +35,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.ui.PrimaryButton
-import com.aditya.wakey.ui.theme.Inter
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.ui.PrimaryButton
+import app.upwake.ui.theme.Inter
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
@@ -96,7 +96,7 @@ fun topicFor(timeMs: Long = System.currentTimeMillis()): String {
 fun wordCount(s: String) = s.trim().split(Regex("\\s+")).count { w -> w.any { it.isLetterOrDigit() } }
 
 object GratitudeStore {
-    private const val PREFS = "wakey_gratitude"
+    private const val PREFS = "upwake_gratitude"
     private const val KEY = "entries"
 
     private val _entries = MutableStateFlow<List<GratitudeEntry>>(emptyList())
@@ -133,7 +133,15 @@ object GratitudeStore {
 
     @Synchronized
     fun add(ctx: Context, topic: String, text: String) {
-        val list = listOf(GratitudeEntry(System.currentTimeMillis(), topic, text.trim())) + all(ctx)
+        write(ctx, listOf(GratitudeEntry(System.currentTimeMillis(), topic, text.trim())) + all(ctx))
+    }
+
+    @Synchronized
+    fun delete(ctx: Context, time: Long) {
+        write(ctx, all(ctx).filter { it.time != time })
+    }
+
+    private fun write(ctx: Context, list: List<GratitudeEntry>) {
         val arr = JSONArray(list.map { JSONObject().put("t", it.time).put("topic", it.topic).put("text", it.text) })
         ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY, arr.toString()).apply()
@@ -163,9 +171,9 @@ fun GratitudeScreen(onSave: (topic: String, text: String) -> Unit) {
     ) {
         Spacer(Modifier.height(40.dp))
         Box(
-            Modifier.size(64.dp).clip(CircleShape).background(W.Card),
+            Modifier.size(64.dp).clip(CircleShape).background(W.DawnDim),
             contentAlignment = Alignment.Center,
-        ) { Icon(WIcons.Sun, null, tint = W.Text, modifier = Modifier.size(30.dp)) }
+        ) { Icon(WIcons.Sun, null, tint = W.Dawn, modifier = Modifier.size(30.dp)) }
         Text(
             if (hour < 12) "Good morning." else "Good day.",
             color = W.Text, fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp,

@@ -1,4 +1,4 @@
-package com.aditya.wakey.data
+package app.upwake.data
 
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -7,9 +7,9 @@ import org.json.JSONArray
 
 /** Tiny JSON-in-SharedPreferences store. Plenty for a handful of alarms. */
 object AlarmStore {
-    private const val PREFS = "wakey_alarms"
+    private const val PREFS = "upwake_alarms"
     private const val KEY = "alarms"
-    private const val STATE = "wakey_state"
+    private const val STATE = "upwake_state"
 
     /** Special id used by the "test alarm" button in Settings (never stored). */
     const val QUICK_TEST_ID = 99_999

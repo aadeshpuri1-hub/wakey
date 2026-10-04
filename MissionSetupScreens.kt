@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -37,14 +35,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.mission.CameraGate
-import com.aditya.wakey.mission.CameraPreview
-import com.aditya.wakey.mission.PhotoMatcher
-import com.aditya.wakey.mission.ScanFrame
-import com.aditya.wakey.mission.ShutterButton
-import com.aditya.wakey.mission.rememberPreviewView
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
+import app.upwake.mission.CameraGate
+import app.upwake.mission.CameraPreview
+import app.upwake.mission.PhotoMatcher
+import app.upwake.mission.ScanFrame
+import app.upwake.mission.ShutterButton
+import app.upwake.mission.rememberPreviewView
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
 import androidx.compose.foundation.layout.size
 
 @Composable
@@ -53,7 +51,7 @@ private fun SetupTopBar(title: String, onClose: () -> Unit) {
         Modifier.fillMaxWidth().background(Color(0x99000000)).padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Close", tint = Color.White) }
+        IconButton(onClick = onClose) { Icon(WIcons.Close, "Close", tint = Color.White) }
         Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
     }
 }

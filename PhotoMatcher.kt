@@ -1,4 +1,4 @@
-package com.aditya.wakey.mission
+package app.upwake.mission
 
 import android.content.Context
 import android.graphics.Bitmap

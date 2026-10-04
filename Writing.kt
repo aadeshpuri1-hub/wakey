@@ -1,4 +1,4 @@
-package com.aditya.wakey.ring
+package app.upwake.ring
 
 import kotlin.math.max
 import kotlin.math.min

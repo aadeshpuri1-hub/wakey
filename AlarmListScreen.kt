@@ -1,4 +1,4 @@
-package com.aditya.wakey.ui
+package app.upwake.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,12 +31,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aditya.wakey.alarm.AlarmScheduler
-import com.aditya.wakey.data.Alarm
-import com.aditya.wakey.ui.theme.ClockStyle
-import com.aditya.wakey.ui.theme.W
-import com.aditya.wakey.ui.theme.WIcons
-import com.aditya.wakey.ui.theme.icon
+import app.upwake.alarm.AlarmScheduler
+import app.upwake.data.Alarm
+import app.upwake.ui.theme.ClockStyle
+import app.upwake.ui.theme.W
+import app.upwake.ui.theme.WIcons
+import app.upwake.ui.theme.icon
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -71,6 +71,12 @@ fun AlarmListScreen(
     ) {
         item {
             Column(Modifier.padding(start = 6.dp, end = 6.dp, bottom = 14.dp)) {
+                Text(
+                    if (next != null) "NEXT ALARM" else "UPWAKE",
+                    color = if (next != null) W.Dawn else W.Text3, fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
                 Text(
                     if (next != null) AlarmScheduler.ringInText(next.second, now) else "No alarms on",
                     fontSize = 30.sp, fontWeight = FontWeight.Bold, color = W.Text, letterSpacing = (-0.5).sp,

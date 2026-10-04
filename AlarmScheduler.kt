@@ -1,25 +1,30 @@
-package com.aditya.wakey.alarm
+package app.upwake.alarm
 
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.aditya.wakey.data.Alarm
-import com.aditya.wakey.data.AlarmStore
-import com.aditya.wakey.ui.MainActivity
+import app.upwake.data.Alarm
+import app.upwake.data.AlarmStore
+import app.upwake.ui.MainActivity
 import java.util.Calendar
 
 object AlarmScheduler {
-    const val ACTION_FIRE = "com.aditya.wakey.FIRE"
+    const val ACTION_FIRE = "app.upwake.FIRE"
     const val EXTRA_ID = "alarm_id"
     const val EXTRA_KIND = "kind"
     const val KIND_NORMAL = 0
     const val KIND_SNOOZE = 1
     const val KIND_TEST = 2
+    /** Resume after a reboot straight into the morning check-in (no sound). */
+    const val KIND_RESUME_GRATITUDE = 3
+    /** Resume a ringing alarm after a reboot. */
+    const val KIND_RESUME_RING = 4
 
     private const val SNOOZE_OFFSET = 100_000
     private const val TEST_OFFSET = 200_000
+    private const val RESUME_OFFSET = 300_000
 
     /** Next time (epoch ms) this alarm should ring, strictly in the future. */
     fun nextTrigger(alarm: Alarm, nowMs: Long = System.currentTimeMillis()): Long {
@@ -53,6 +58,17 @@ object AlarmScheduler {
 
     fun scheduleTest(ctx: Context, alarmId: Int, seconds: Int) {
         set(ctx, alarmId + TEST_OFFSET, System.currentTimeMillis() + seconds * 1000L, alarmId, KIND_TEST)
+    }
+
+    /**
+     * Android 15+ forbids starting the alarm's foreground service from BOOT_COMPLETED,
+     * so after a reboot we resume through a 3-second exact alarm instead.
+     */
+    fun scheduleResume(ctx: Context, alarmId: Int, gratitude: Boolean) {
+        set(
+            ctx, alarmId + RESUME_OFFSET, System.currentTimeMillis() + 3_000L, alarmId,
+            if (gratitude) KIND_RESUME_GRATITUDE else KIND_RESUME_RING,
+        )
     }
 
     fun cancel(ctx: Context, alarmId: Int) {
